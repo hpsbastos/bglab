@@ -62,7 +62,7 @@ Now start loading the data into the single cell dataset (SCD) object which is re
 scd <- newSCD("RNAseq", counts = counts, genoData = geneTable, spike = ercc, qc = qc, phenoData = meta)
 ```
 
-Perform QC, this will output a separate pdf for each lane of the flowCell (If that is encoded in the metadata) otherwise the user will need to supply a different column in the metadata. For convenience this function will also perform normalisation - as per the DESeq size factor. In future versions this may be separated.
+Perform QC, this will output a separate pdf for each lane of the flowCell (If that is encoded in the metadata) otherwise the user will need to supply a different column in the metadata. For convenience this function will also perform normalisation - as per the DESeq size factor. In future versions this will be separated.
 
 ``` r
 scd <- performQC(scd, pdf = "qc")
@@ -75,7 +75,7 @@ scd <- techVar(scd, useERCC = FALSE, meanForFit = 10)
 plotTechVar(scd@technicalNoise)
 ```
 
-Visualise the datasets using dimensionality reduction of choice.
+Visualise the datasets using dimensionality reduction of your choice. See help documentation for setting parameters.
 
 ``` r
 scd <- runTSNE(scd, ndims = 2, seed = 0, verbose = TRUE, use_dist = TRUE)
@@ -89,4 +89,4 @@ plot(dmap$vectors, bg = pData(scd)[,"cluster"], col = "black", pch = 21)
 plot(dmap$vectors, bg = ggCol(pData(scd)[,"embryoStage"]), col = "black", pch = 21)
 ```
 
-This si a large package and many other functions are available. Look at the help documents if things are not clear, feel free to contact me by email <wj241@cam.ac.uk>
+This is a large package and many other functions are available. Look at the help documents if things are not clear, feel free to contact me by email <wj241@cam.ac.uk>
