@@ -89,4 +89,4 @@ plot(dmap$vectors, bg = pData(scd)[,"cluster"], col = "black", pch = 21)
 plot(dmap$vectors, bg = ggCol(pData(scd)[,"embryoStage"]), col = "black", pch = 21)
 ```
 
-This is a large package and many other functions are available. Look at the help documents if things are not clear, feel free to contact me by email <wj241@cam.ac.uk>
+This is a large package and many other functions are available. Look at the help documents. If things are still not clear, feel free to contact me by email <wj241@cam.ac.uk>
