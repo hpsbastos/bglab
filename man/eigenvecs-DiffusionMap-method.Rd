@@ -25,3 +25,4 @@ Returns eigen vectors for Diffusion Map object
 \author{
 Wajid Jawaid
 }
+

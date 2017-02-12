@@ -23,3 +23,4 @@ Calculates sliding average
 \author{
 Wajid Jawaid
 }
+

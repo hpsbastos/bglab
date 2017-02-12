@@ -25,3 +25,4 @@ Returns eigen values for Diffusion Map object
 \author{
 Wajid Jawaid
 }
+

@@ -31,3 +31,4 @@ Predicts diffusion map projection from new data points
 \author{
 Wajid Jawaid
 }
+

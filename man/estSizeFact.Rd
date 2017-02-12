@@ -21,3 +21,4 @@ Estimates size factors as in DESeq.
 \author{
 Wajid Jawaid
 }
+

@@ -1958,3 +1958,109 @@ winsor <- function (x, fraction=0.05, lower = FALSE) {
     x
     
 }
+
+##' Generate a sparse Markov matrix for momentum method to generate training data
+##'
+##' Generate a sparse Markov matrix for momentum method to generate training data
+##' @title Generate a sparse Markov matrix for momentum method to generate training data.
+##' Utilises two approaches. First removes edges that are below a threshold for the probability if n number of cells are equally connected, i.e. if all cells are connected all will have an equal but low transition probability and this may be considered to be a disconnected node.
+##' Second cells that are more highly connected are allowed to keep greater number of nearest neoghbours.
+##' @param x Square matrix representing proximity. Try using Gaussian kernel from
+##' maps.
+##' @param nn Default ceiling(rowSums(x)). Number of nearest neighbours. The default tries
+##' to ensure that highly connected nodes remain highly connected.
+##' @param n Number of cells with equal binding threshold.
+##' @return Returns normalised transition matrix.
+##' @author Wajid Jawaid
+##' @export
+sparseMarkov <- function(x, nn = ceiling(rowSums(x)), n = ncol(x) - 1) {
+    if (!is.null(nn)) {
+        for (i in 1:nrow(x)) {
+            nndist <- sort(x[i,], decreasing = TRUE)[nn[i]]
+            x[i,] <- (x[i,] >= nndist) * x[i,]
+            x[i,] <- x[i,] / sum(x[i,])
+        }
+    }
+    x[x < (1/n)] <- 0
+    x
+}
+
+##' Louvain clustering on transition matrix
+##'
+##' Louvain clustering on transition matrix
+##' @title Louvain clustering on transition matrix
+##' @param mkv Transition matrix
+##' @return Returns a list with graph, dataframe and community object
+##' @author Wajid Jawaid
+##' @export
+##' @importFrom igraph cluster_louvain communities
+findLouvain <- function(mkv) {
+    gph <- graph.adjacency(mkv, weighted = TRUE, mode = "undirected")
+    cll <- cluster_louvain(gph)
+    lvnClust <- communities(cll)
+    lvnClust <- lapply(1:length(lvnClust),
+                       function(x) cbind.data.frame(cell=lvnClust[[x]],
+                                                    class=as.character(x)))
+    lvnClust <- do.call(rbind, lvnClust)
+    rownames(lvnClust) <- lvnClust$cell
+    lvnClust
+    lvnClust[,1] <- NULL                # Remove duplicate name column
+    lvnClust <- lvnClust[rownames(mkv),,drop=FALSE]
+    return(list(gph=gph, clust=lvnClust, cll = cll))
+    ## lvnClust <- lvnClust[rownames(pData(scd)),,drop=FALSE]    
+}
+
+##' Perform Louvain clustering
+##'
+##' Perform Louvain clustering
+##' @title Perform Louvain clustering
+##' @param scd Single Cell Dataset object
+##' @param pcaDims Number of dimensions to use
+##' @param nsig knn for automatic sigma calculation
+##' @param dist Provide distance matrix to speed up clustering
+##' @param plotDims Number of dimensions to use on Fruchter-Reingold layout
+##' of graph.
+##' @param layoutIter Number of iterstions to run Fruchterman-Reingold graph 
+##' @return List
+##' @author Wajid Jawaid
+##' @importFrom igraph layout_with_fr
+##' @export
+clustLouvain <- function(scd, pcaDims = 50, nsig = 20, dist = NULL, plotDims = 3,
+                         layoutIter = 1000) {
+    if ((length(eigenvecs(getPCA(scd))) != 0) &&
+        nrow(eigenvecs(getPCA(scd))) == nrow(pData(scd))) {
+        cat("Using previoulsy calculated PCA.\n")
+    } else {
+        cat("Performing PCA ... ")
+        scd <- runPCA(scd, scale. = TRUE)
+        cat("Done.\n")
+    }
+    numDims <- pcaDims
+    plot(eigenvals(getPCA(scd))*100, type = "l", ylab = "% variance explained",
+         main = paste0("First ", numDims, " dims explain ",
+                       format(sum(eigenvals(getPCA(scd))[1:pcaDims])*100, digits = 3),
+                       "% of the variance."))
+    abline(v = numDims, lty = 2, col = "red")
+    ## y <- diffuseMat2(exprs(scd), distfun = function(x) (1-cor(x))^2, nsig = 10,
+    ##                  sqdistmat = cosineSqDistAll)
+    cat("Calculating similarity ... ")
+    d2 <- as.matrix((1-cor(t(eigenvecs(getPCA(scd))[,1:pcaDims]), method = "spearman"))^2)
+    sigmas <- apply(d2, 1, function(x) sqrt(sort(x)[nsig])/2)
+    mkv <- applyGaussianKernelwithVariableSigma(d2, sigmas)
+    rownames(mkv) <- colnames(mkv)
+    diag(mkv) <- 0
+    cat("Done.\nMake sparse ... ")
+    mkv <- sparseMarkov(mkv)
+    mkv <- (mkv + t(mkv)) / 2
+    ## sum(apply(mkv, 1, sd) == 0)
+    ## sum(apply(mkv, 2, sd) == 0)
+    cat("Done.\nFind communities ... ")
+    lvnClust <- findLouvain(mkv)
+    cat("Done.\nGenerate layout ... ")
+    l <- layout_with_fr(lvnClust$gph, dim = plotDims, niter = layoutIter)
+    cat("Done.\nAnnotate and Return.\n")
+    rownames(l) <- rownames(pData(scd))
+    colnames(l) <- paste("D", 1:plotDims)
+    return(list(g = lvnClust, dist = d2, layout = l, plotDims = plotDims,
+                layoutIter = layoutIter, mkv = mkv))
+}

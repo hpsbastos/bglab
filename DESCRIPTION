@@ -1,6 +1,6 @@
 Package: bglab
 Title: Berthold Gottgens lab scRNA seq
-Version: 1.0
+Version: 1.1
 Authors@R: person("Wajid", "Jawaid", email = "wj241@cam.ac.uk", role = c("aut", "cre"))
 Description: A toolkit for single cell RNAseq analysis.
 Depends:
@@ -27,4 +27,4 @@ Imports:
     rjson,
     DESeq2,
     BiocGenerics
-RoxygenNote: 6.0.1
+RoxygenNote: 5.0.1

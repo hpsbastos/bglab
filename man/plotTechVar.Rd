@@ -36,3 +36,4 @@ Plots a technical noise analysis plot
 \author{
 Wajid Jawaid
 }
+
