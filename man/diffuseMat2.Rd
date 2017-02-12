@@ -101,4 +101,3 @@ This \eqn{R} without the first eigen vector is returned as the diffusion map.
 \author{
 Wajid Jawaid
 }
-

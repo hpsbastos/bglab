@@ -5,7 +5,7 @@
 \title{Find highly variable genes (log linear model)}
 \usage{
 logVarGenes(scd, minMean = 0, fraction = 0.05, lower = FALSE,
-  residualsInLogSpace = TRUE)
+  residualsInLogSpace = TRUE, quadratic = TRUE, se = qnorm(p = 0.975))
 }
 \arguments{
 \item{scd}{Single Cell Dataset}
@@ -18,9 +18,13 @@ logVarGenes(scd, minMean = 0, fraction = 0.05, lower = FALSE,
 If you also require the bottom end to be winsorised set this to TRUE.}
 
 \item{residualsInLogSpace}{Use lm instead of nls to optimise residuals in log-space.}
+
+\item{quadratic}{Fit an order 2 model to log cv-squared against log mean}
+
+\item{se}{The number of standard errors to return.}
 }
 \value{
-Returns a list of means, cv2, fit coefficients and variable genes
+Returns a list of means, cv2, fit object and variable genes
 }
 \description{
 Find highly variable genes (log linear model)
@@ -29,9 +33,9 @@ Find highly variable genes (log linear model)
 Find highly variable genes (log linear model).
 Model is fitted to:
 \deqn{\frac{\sigma^{2}}{\mu^{2}} = a * \mu^{k}}
-Using the non-linear squares method.
+Using the non-linear squares method, if residualInLogSpace is FALSE. Otherwise
+using a linear model +/- a quadartic term.
 }
 \author{
 Wajid Jawaid
 }
-

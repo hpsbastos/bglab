@@ -23,4 +23,3 @@ Calculates Euclidean distances between vectors arranged as columns in a matrix.
 \author{
 Wajid Jawaid
 }
-

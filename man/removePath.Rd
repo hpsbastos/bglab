@@ -26,4 +26,3 @@ Generic function to remove saved paths
 \author{
 Wajid Jawaid
 }
-

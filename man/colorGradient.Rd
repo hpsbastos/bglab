@@ -36,4 +36,3 @@ Helper function for \code{plotGene} to calculate colour gradient
 \author{
 Wajid Jawaid
 }
-

@@ -23,4 +23,3 @@ Set whether to use QC or not
 \author{
 Wajid Jawaid
 }
-

@@ -21,4 +21,3 @@ Estimate size factor supercharged
 \author{
 wj241
 }
-

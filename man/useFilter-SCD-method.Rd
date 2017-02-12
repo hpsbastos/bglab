@@ -22,4 +22,3 @@ To use filter or not.
 \author{
 Wajid Jawaid
 }
-

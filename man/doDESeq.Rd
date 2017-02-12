@@ -38,4 +38,3 @@ Differential expression using DESeq2
 \author{
 Wajid Jawaid
 }
-
