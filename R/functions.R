@@ -1844,17 +1844,20 @@ plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
 ##' Find highly variable genes (log linear model).
 ##' Model is fitted to:
 ##' \deqn{\frac{\sigma^{2}}{\mu^{2}} = a * \mu^{k}}
-##' Using the non-linear squares method.
+##' Using the non-linear squares method, if residualInLogSpace is FALSE. Otherwise
+##' using a linear model +/- a quadartic term.
 ##' @title Find highly variable genes (log linear model)
 ##' @param scd Single Cell Dataset
 ##' @param minMean Fit model to genes with mean expression gretaer than minMean
 ##' @param residualsInLogSpace Use lm instead of nls to optimise residuals in log-space.
+##' @param quadratic Fit an order 2 model to log cv-squared against log mean
+##' @param se The number of standard errors to return.
 ##' @inheritParams winsor
-##' @return Returns a list of means, cv2, fit coefficients and variable genes
+##' @return Returns a list of means, cv2, fit object and variable genes
 ##' @author Wajid Jawaid
 ##' @export
 ##' @importFrom stats nls coefficients
-logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residualsInLogSpace = TRUE) {
+logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residualsInLogSpace = TRUE, quadratic = TRUE, se = qnorm(p = 0.975)) {
     if (fraction >= 1) {
         stop("Fraction must be [0,1)")
     } else if (fraction > 0) {
@@ -1877,9 +1880,15 @@ logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residu
         lglimmu <- log10(limmu)
         lglimcv2 <- log10(limcv2)
         lglmu = log10(lmu)
-        gfit <- lm(lglimcv2 ~ lglimmu)
-        lcv2 <- 10^(predict(gfit, data.frame(lglimmu = lglmu)))
-        pcv2 <- 10^(predict(gfit, data.frame(lglimmu = log10(mu))))
+        lglimmu2 = lglimmu^2
+        lgmu <- log10(mu)
+        gfit <- lm(lglimcv2 ~ lglimmu + lglimmu2)
+        rlcv2 <- 10^(predict.lm(gfit, data.frame(lglimmu = lglmu, lglimmu2 = lglmu^2),
+                               se.fit = TRUE))
+        rpcv2 <- 10^(predict.lm(gfit, data.frame(lglimmu = lgmu, lglimmu2 = lgmu^2)))
+        lcv2 <- rlcv2$fit
+        ucilcv2 <- rlcv2$fit + se * rlcv2$se
+        pcv2 <- rpcv2$fit + se * rpcv2$se
     } else {
         gfit <- nls(limcv2 ~ a * limmu^k, start=c(a=20, k = 1))
         lcv2 <- coefficients(gfit)[["a"]] * lmu^coefficients(gfit)[["k"]]
@@ -1889,9 +1898,10 @@ logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residu
     plot(mu, cv2, pch=20, log = "xy")
     abline(v = minMean, lty = 2, col = "blue")
     lines(lmu, lcv2, col = "orange", lwd = 2)
+    if (residualInLogSpace) lines(lmu, ucilcv2, col = "orange", lwd = 2, lty = 2)
     highVarGenes <- names(cv2)[cv2>pcv2]
     points(mu[highVarGenes], cv2[highVarGenes], col = "red", pch = 20)
-    return(list(mean = mu, cv2 = cv2, fit = coefficients(gfit), varGenes = highVarGenes))
+    return(list(mean = mu, cv2 = cv2, fit = gfit, varGenes = highVarGenes))
 
 }
 
