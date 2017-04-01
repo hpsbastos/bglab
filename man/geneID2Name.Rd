@@ -23,4 +23,3 @@ Returns human readable gene names
 \author{
 Wajid Jawaid
 }
-

@@ -38,4 +38,3 @@ Initialise a SCD object
 \author{
 Wajid Jawaid
 }
-

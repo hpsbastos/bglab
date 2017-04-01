@@ -22,4 +22,3 @@ Retrieve gene expression data from Single Cell Dataset object
 \author{
 Wajid Jawaid
 }
-

@@ -1589,7 +1589,7 @@ writeGeneList <- function(listofGenes, file) {
 ##'    \emph{niter} \tab Iterations taken for Arnoldi algorithm to converge.\cr
 ##'    \emph{nops} \tab  Number of operations. \cr
 ##'    \emph{val0} \tab 1st eigen value - should be 1. If not be suspicious!\cr
-##'    \emph{vec0} \tab 1st eigen vector - should be \eqn{n^{-\frac{1}{2}}}{1/sqrt(n)},%
+##'    \emph{vec0} \tab 1st eigen vector - should be \eqn{n^{-\frac{1}{2}}{1/sqrt(n)}},%
 ##'                      where n is the number of cells/samples.\cr
 ##'    \emph{usedARPACK} \tab Predicates use of ARPACK for spectral decomposition.\cr
 ##'    \emph{distfun} \tab Function used to calculate the squared distance.\cr
@@ -1603,6 +1603,12 @@ writeGeneList <- function(listofGenes, file) {
 ##'                                 \code{markov}.\cr
 ##' }
 ##' @author Wajid Jawaid
+##' @references
+##' Haghverdi, L., Buettner, F., Theis, F.J., 2015. Diffusion maps for high-dimensional single-cell analysis of differentiation data. Bioinformatics 31, 2989–2998. doi:10.1093/bioinformatics/btv325
+##'
+##' ##' Haghverdi, L., Büttner, M., Wolf, F.A., Buettner, F., Theis, F.J., 2016. Diffusion pseudotime robustly reconstructs lineage branching. Nat Meth 13, 845–848. doi:10.1038/nmeth.3971
+##'
+##' Angerer, P., Haghverdi, L., Büttner, M., Theis, F.J., Marr, C., Buettner, F., 2016. destiny : diffusion maps for large-scale single-cell data in R. Bioinformatics 32, 1241–1243. doi:10.1093/bioinformatics/btv715
 ##' @export
 diffuseMat2 <- function(data, ndims = 20, nsig = 5,
                         removeFirst = TRUE, useARPACK = TRUE,
@@ -1844,7 +1850,7 @@ plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
 ##' Find highly variable genes (log linear model).
 ##' Model is fitted to:
 ##' \deqn{\frac{\sigma^{2}}{\mu^{2}} = a * \mu^{k}}
-##' Using the non-linear squares method, if residualInLogSpace is FALSE. Otherwise
+##' Using the non-linear squares method, if residualsInLogSpace is FALSE. Otherwise
 ##' using a linear model +/- a quadartic term.
 ##' @title Find highly variable genes (log linear model)
 ##' @param scd Single Cell Dataset
@@ -1856,7 +1862,7 @@ plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
 ##' @return Returns a list of means, cv2, fit object and variable genes
 ##' @author Wajid Jawaid
 ##' @export
-##' @importFrom stats nls coefficients
+##' @importFrom stats nls coefficients qnorm predict.lm
 logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residualsInLogSpace = TRUE, quadratic = TRUE, se = qnorm(p = 0.975)) {
     if (fraction >= 1) {
         stop("Fraction must be [0,1)")
@@ -1898,7 +1904,7 @@ logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residu
     plot(mu, cv2, pch=20, log = "xy")
     abline(v = minMean, lty = 2, col = "blue")
     lines(lmu, lcv2, col = "orange", lwd = 2)
-    if (residualInLogSpace) lines(lmu, ucilcv2, col = "orange", lwd = 2, lty = 2)
+    if (residualsInLogSpace) lines(lmu, ucilcv2, col = "orange", lwd = 2, lty = 2)
     highVarGenes <- names(cv2)[cv2>pcv2]
     points(mu[highVarGenes], cv2[highVarGenes], col = "red", pch = 20)
     return(list(mean = mu, cv2 = cv2, fit = gfit, varGenes = highVarGenes))

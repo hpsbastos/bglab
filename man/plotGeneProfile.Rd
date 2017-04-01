@@ -44,4 +44,3 @@ Plots gene profile on trajectory
 \author{
 Wajid Jawaid
 }
-

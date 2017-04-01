@@ -22,4 +22,3 @@ To use filter or not. Replaces "noprocessing" argument from previous version
 \author{
 Wajid Jawaid
 }
-

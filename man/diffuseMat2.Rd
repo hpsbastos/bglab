@@ -38,7 +38,7 @@ List output containing:
    \emph{niter} \tab Iterations taken for Arnoldi algorithm to converge.\cr
    \emph{nops} \tab  Number of operations. \cr
    \emph{val0} \tab 1st eigen value - should be 1. If not be suspicious!\cr
-   \emph{vec0} \tab 1st eigen vector - should be \eqn{n^{-\frac{1}{2}}}{1/sqrt(n)},%
+   \emph{vec0} \tab 1st eigen vector - should be \eqn{n^{-\frac{1}{2}}{1/sqrt(n)}},%
                      where n is the number of cells/samples.\cr
    \emph{usedARPACK} \tab Predicates use of ARPACK for spectral decomposition.\cr
    \emph{distfun} \tab Function used to calculate the squared distance.\cr
@@ -98,7 +98,13 @@ and
 
 This \eqn{R} without the first eigen vector is returned as the diffusion map.
 }
+\references{
+Haghverdi, L., Buettner, F., Theis, F.J., 2015. Diffusion maps for high-dimensional single-cell analysis of differentiation data. Bioinformatics 31, 2989–2998. doi:10.1093/bioinformatics/btv325
+
+##' Haghverdi, L., Büttner, M., Wolf, F.A., Buettner, F., Theis, F.J., 2016. Diffusion pseudotime robustly reconstructs lineage branching. Nat Meth 13, 845–848. doi:10.1038/nmeth.3971
+
+Angerer, P., Haghverdi, L., Büttner, M., Theis, F.J., Marr, C., Buettner, F., 2016. destiny : diffusion maps for large-scale single-cell data in R. Bioinformatics 32, 1241–1243. doi:10.1093/bioinformatics/btv715
+}
 \author{
 Wajid Jawaid
 }
-

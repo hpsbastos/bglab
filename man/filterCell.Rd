@@ -21,4 +21,3 @@ To use cell filter or not.
 \author{
 Wajid Jawaid
 }
-

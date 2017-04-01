@@ -18,4 +18,3 @@ Decorate plots with log10 values. The plot must have prviously been generated.
 \author{
 Wajid Jawaid
 }
-

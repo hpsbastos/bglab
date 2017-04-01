@@ -26,4 +26,3 @@ Generates minmium spanning tree and adds diameter path to \code{paths} slot
 \author{
 Wajid Jawaid
 }
-

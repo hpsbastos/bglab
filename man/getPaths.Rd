@@ -21,4 +21,3 @@ Retrieve paths from a dimensionality reduced object
 \author{
 Wajid Jawaid
 }
-

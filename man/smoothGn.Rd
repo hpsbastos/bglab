@@ -29,4 +29,3 @@ Gam smoothing of gene expression
 \author{
 Wajid Jawaid
 }
-
