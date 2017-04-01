@@ -1881,20 +1881,22 @@ logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residu
     wmu <- mu > minMean
     limmu <- mu[wmu]
     limcv2 <- cv2[wmu]
-    lmu <- seq(min(mu), max(mu), length.out = 10)
+    lmu <- 10^(seq(min(log10(mu)), max(log10(mu)), length.out = 10))
     if (residualsInLogSpace) {
         lglimmu <- log10(limmu)
+        lglimmu2 = lglimmu^2
         lglimcv2 <- log10(limcv2)
         lglmu = log10(lmu)
-        lglimmu2 = lglimmu^2
         lgmu <- log10(mu)
+        
         gfit <- lm(lglimcv2 ~ lglimmu + lglimmu2)
-        rlcv2 <- 10^(predict.lm(gfit, data.frame(lglimmu = lglmu, lglimmu2 = lglmu^2),
-                               se.fit = TRUE))
-        rpcv2 <- 10^(predict.lm(gfit, data.frame(lglimmu = lgmu, lglimmu2 = lgmu^2)))
-        lcv2 <- rlcv2$fit
-        ucilcv2 <- rlcv2$fit + se * rlcv2$se
-        pcv2 <- rpcv2$fit + se * rpcv2$se
+        rlcv2 <- predict.lm(gfit, data.frame(lglimmu = lglmu, lglimmu2 = lglmu^2),
+                            se.fit = TRUE)
+        rpcv2 <- predict.lm(gfit, data.frame(lglimmu = lgmu, lglimmu2 = lgmu^2), se.fit = TRUE)
+        browser()
+        lcv2 <- 10^(rlcv2$fit)
+        ucilcv2 <- 10^(rlcv2$fit + se * rlcv2$se)
+        pcv2 <- 10^(rpcv2$fit + se * rpcv2$se)
     } else {
         gfit <- nls(limcv2 ~ a * limmu^k, start=c(a=20, k = 1))
         lcv2 <- coefficients(gfit)[["a"]] * lmu^coefficients(gfit)[["k"]]
