@@ -33,7 +33,7 @@ Find highly variable genes (log linear model)
 Find highly variable genes (log linear model).
 Model is fitted to:
 \deqn{\frac{\sigma^{2}}{\mu^{2}} = a * \mu^{k}}
-Using the non-linear squares method, if residualInLogSpace is FALSE. Otherwise
+Using the non-linear squares method, if residualsInLogSpace is FALSE. Otherwise
 using a linear model +/- a quadartic term.
 }
 \author{
