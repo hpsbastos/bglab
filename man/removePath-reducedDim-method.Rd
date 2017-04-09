@@ -25,4 +25,3 @@ Removes paths from object
 \author{
 Wajid Jawaid
 }
-

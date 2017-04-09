@@ -29,4 +29,3 @@ Generate a sparse Markov matrix for momentum method to generate training data
 \author{
 Wajid Jawaid
 }
-

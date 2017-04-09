@@ -18,4 +18,3 @@ Get rendering data from an open rgl plot
 \author{
 Wajid Jawaid
 }
-

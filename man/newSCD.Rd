@@ -36,4 +36,3 @@ Construct a new Single cell dataset object for the bglab package
 \author{
 Wajid Jawaid
 }
-

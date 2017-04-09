@@ -22,4 +22,3 @@ Returns loadings from PCA object
 \author{
 Wajid Jawaid
 }
-

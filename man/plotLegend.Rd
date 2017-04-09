@@ -23,4 +23,3 @@ Plots legend for plotGene() function when using multiple genes
 \author{
 Wajid Jawaid
 }
-

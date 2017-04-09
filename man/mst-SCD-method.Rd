@@ -28,4 +28,3 @@ General minimum spanning true
 \author{
 Wajid Jawaid
 }
-

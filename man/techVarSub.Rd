@@ -43,4 +43,3 @@ then a technical noise analysis is perfromed as described in brennecke et al.
 \author{
 Wajid Jawaid
 }
-

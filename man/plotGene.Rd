@@ -84,4 +84,3 @@ Plots dimensionality reduced object with points coloured by level of gene expres
 \author{
 Wajid Jawaid
 }
-

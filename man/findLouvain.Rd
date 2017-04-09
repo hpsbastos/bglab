@@ -21,4 +21,3 @@ Louvain clustering on transition matrix
 \author{
 Wajid Jawaid
 }
-

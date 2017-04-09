@@ -37,4 +37,3 @@ Diffusion map dimensionality reduction
 \author{
 Wajid Jawaid
 }
-

@@ -39,4 +39,3 @@ using a linear model +/- a quadartic term.
 \author{
 Wajid Jawaid
 }
-

@@ -31,4 +31,3 @@ Function to remove selected cells from analyses
 \author{
 Wajid Jawaid
 }
-

@@ -1805,10 +1805,11 @@ plotQC <- function(scd, catG = NULL, ylims = NULL) {
 ##' @title Plots legend for plotGene() function
 ##' @param x output from plotgene
 ##' @param mpar plot parameters
+##' @param txtCol Default "black". Colour of axis and text
 ##' @return generates plot
 ##' @author Wajid Jawaid
 ##' @export
-plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
+plotLegend <- function(x, mpar = list(mar=c(4,4,2,2), txtCol = "black")) {
     data <- x$pointCol
     channelOrder <- x$channelOrder
     genes <- x$genes
@@ -1832,7 +1833,7 @@ plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
     par(mpar)
     plot(NULL, xlim = c(0, xprMax[1] + xStep/2), ylim = c(0, xprMax[2] + yStep/2),
          axes = FALSE, xlab = xgene, ylab = ygene)
-    axis(1); axis(2)
+    axis(1, col = txtCol); axis(2, col = txtCol)
     xprSeq <- xprSeq - c(xStep, yStep)/2
     xprSeq <- cbind(xprSeq, xprSeq[,10] + c(xStep, yStep))
     for (i in 1:10) {
@@ -1863,6 +1864,7 @@ plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
 ##' @author Wajid Jawaid
 ##' @export
 ##' @importFrom stats nls coefficients qnorm predict.lm
+
 logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residualsInLogSpace = TRUE, quadratic = TRUE, se = qnorm(p = 0.975)) {
     if (fraction >= 1) {
         stop("Fraction must be [0,1)")
@@ -2031,7 +2033,7 @@ findLouvain <- function(mkv) {
 ##' @author Wajid Jawaid
 ##' @importFrom igraph layout_with_fr
 ##' @export
-clustLouvain <- function(scd, pcaDims = 50, nsig = 20, dist = NULL, plotDims = 3,
+clustLouvain <- function(scd, pcaDims = 50, nsig = 20, d2 = NULL, sim = NULL, plotDims = 3,
                          layoutIter = 1000) {
     if ((length(eigenvecs(getPCA(scd))) != 0) &&
         nrow(eigenvecs(getPCA(scd))) == nrow(pData(scd))) {
@@ -2049,12 +2051,22 @@ clustLouvain <- function(scd, pcaDims = 50, nsig = 20, dist = NULL, plotDims = 3
     abline(v = numDims, lty = 2, col = "red")
     ## y <- diffuseMat2(exprs(scd), distfun = function(x) (1-cor(x))^2, nsig = 10,
     ##                  sqdistmat = cosineSqDistAll)
-    cat("Calculating similarity ... ")
-    d2 <- as.matrix((1-cor(t(eigenvecs(getPCA(scd))[,1:pcaDims]), method = "spearman"))^2)
-    sigmas <- apply(d2, 1, function(x) sqrt(sort(x)[nsig])/2)
-    mkv <- applyGaussianKernelwithVariableSigma(d2, sigmas)
-    rownames(mkv) <- colnames(mkv)
-    diag(mkv) <- 0
+    if (is.null(d2)) {
+        cat("Calculating distances ... ")
+        d2 <- as.matrix((1-cor(t(eigenvecs(getPCA(scd))[,1:pcaDims]), method = "spearman"))^2)
+    } else {
+        cat("Using supplied distance matrix.")
+    }
+    if (is.null(sim)) {
+        cat("Done.\nCalculating similarities ... ")
+        sigmas <- apply(d2, 1, function(x) sqrt(sort(x)[nsig])/2)
+        mkv <- applyGaussianKernelwithVariableSigma(d2, sigmas)
+        rownames(mkv) <- colnames(mkv)
+        diag(mkv) <- 0
+    } else {
+        cat("Using supplied simailarity/mkv matrix.")
+        mkv <- sim
+    }
     cat("Done.\nMake sparse ... ")
     mkv <- sparseMarkov(mkv)
     mkv <- (mkv + t(mkv)) / 2

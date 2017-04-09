@@ -27,4 +27,3 @@ Writes data from single cell dataset object for use in Matlab
 \author{
 Wajid Jawaid
 }
-

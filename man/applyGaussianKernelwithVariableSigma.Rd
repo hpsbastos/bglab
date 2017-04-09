@@ -25,4 +25,3 @@ Apply Gaussian Kernel using Laleh Haghverdi's variable sigma
 \author{
 Wajid Jawaid
 }
-

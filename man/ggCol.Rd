@@ -27,4 +27,3 @@ Generate ggplot colors
 \author{
 Wajid Jawaid
 }
-

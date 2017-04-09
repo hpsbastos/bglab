@@ -33,4 +33,3 @@ Perform Louvain clustering
 \author{
 Wajid Jawaid
 }
-

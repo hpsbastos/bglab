@@ -22,4 +22,3 @@ Retrieve QC in counts
 \author{
 Wajid Jawaid
 }
-
