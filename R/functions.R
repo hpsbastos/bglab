@@ -1805,11 +1805,10 @@ plotQC <- function(scd, catG = NULL, ylims = NULL) {
 ##' @title Plots legend for plotGene() function
 ##' @param x output from plotgene
 ##' @param mpar plot parameters
-##' @param txtCol Default "black". Colour of axis and text
 ##' @return generates plot
 ##' @author Wajid Jawaid
 ##' @export
-plotLegend <- function(x, mpar = list(mar=c(4,4,2,2), txtCol = "black")) {
+plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
     data <- x$pointCol
     channelOrder <- x$channelOrder
     genes <- x$genes
@@ -1833,7 +1832,7 @@ plotLegend <- function(x, mpar = list(mar=c(4,4,2,2), txtCol = "black")) {
     par(mpar)
     plot(NULL, xlim = c(0, xprMax[1] + xStep/2), ylim = c(0, xprMax[2] + yStep/2),
          axes = FALSE, xlab = xgene, ylab = ygene)
-    axis(1, col = txtCol); axis(2, col = txtCol)
+    axis(1); axis(2)
     xprSeq <- xprSeq - c(xStep, yStep)/2
     xprSeq <- cbind(xprSeq, xprSeq[,10] + c(xStep, yStep))
     for (i in 1:10) {
