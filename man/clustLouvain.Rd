@@ -4,8 +4,8 @@
 \alias{clustLouvain}
 \title{Perform Louvain clustering}
 \usage{
-clustLouvain(scd, pcaDims = 50, nsig = 20, dist = NULL, plotDims = 3,
-  layoutIter = 1000)
+clustLouvain(scd, pcaDims = 50, nsig = 20, d2 = NULL, sim = NULL,
+  plotDims = 3, layoutIter = 1000)
 }
 \arguments{
 \item{scd}{Single Cell Dataset object}
@@ -14,7 +14,9 @@ clustLouvain(scd, pcaDims = 50, nsig = 20, dist = NULL, plotDims = 3,
 
 \item{nsig}{knn for automatic sigma calculation}
 
-\item{dist}{Provide distance matrix to speed up clustering}
+\item{d2}{Optionally supply distance matrix}
+
+\item{sim}{Optionally supply similiarity matrix}
 
 \item{plotDims}{Number of dimensions to use on Fruchter-Reingold layout
 of graph.}

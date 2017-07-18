@@ -654,7 +654,6 @@ heatmap.gottgens <- function(x, cor.method = "spearman", clust.method = "ward.D2
         ## heatmapCols <- get("heatmapCols", pos = globalenv())
         col <- colorRampPalette(rev(heatmapCols))(1000)
         breaks <- seq(min(x),max(x), length.out=1001)
-        rm(heatmapCols)
     }
 
     if (scale == "row" || scale == "column") breaks <- NULL

@@ -650,91 +650,6 @@ estSizeFact <- function(x) {
     apply(x, 2, function(y) exp(median((log(y) - ln_gm_mean)[is.finite(ln_gm_mean)])))
 }
 
-##' Generic diffusion function
-##'
-##' Generic diffusion function
-##' @title Generic diffusion function
-##' @param data Matrix of data with genes in rows and cells in columns.
-##' @param bluntDensityCorrection Blunt density correction
-##' @param normBy Normalise by Column, row or both.
-##' @param distfun A different distance function
-##' @inheritParams diffuse
-##' @return List conatining diffusion map.
-##' @author Wajid Jawaid
-diffuseMat <- function(data, ndims = 4, nn = 0.2, sigma = 12,
-                       removeFirst = TRUE, bluntDensityCorrection = FALSE,
-                       useARPACK = TRUE, normBy = c("Column", "Row", "Original"),
-                       distfun = NULL) {
-    normBy <- tolower(match.arg(normBy))
-    nnp <- nn
-    nn <- ceiling(ncol(data) * nn)      # Number of nearest neighbours to include
-    KT <- sigma^2                       # Diffusion scale parameter
-    cat("Calculating distance matrix. Please wait...")
-    if (is.null(distfun)) {
-        d2 <- as.matrix(fastDist(data, squared = TRUE))       # distance matrix calculation
-    } else d2 <- as.matrix(distfun(data))
-    cat("Done.\n")
-    cat("Applying Gaussian kernel.")
-    W <- exp(-d2 / (2*KT))              # Apply Gaussian kernel
-    if (nnp < 1 & nnp > 0) {
-        cat("Calculating and retaining nearest neighbours.\n")
-        R <- apply(d2, 2, function(x) sort(x)[nn])
-        R <- matrix(rep(R,ncol(d2)), ncol = ncol(d2)) # Find distance for nn closest neighbour
-        W <- (d2<R) * W                     # Only keep nn nearest neighbours
-    }
-    cat("Calculating and applying local density correction.\n")
-    D <- colSums(W)
-    q <- D %*% t(D)                     # Calculate local density
-    if (bluntDensityCorrection) q <- sqrt(q)
-    diag(W) <- 0    
-    H <- W / q                          # Correct for local density
-    colS <- colSums(H)
-    rowS <- rowSums(H)
-    if (normBy[1]=="column") {
-        eS <- colS == 0                 # Excluded cells with no transitions
-        Hp <- t(t(H[!eS,!eS]) / colS[!eS])  # Normalise matrix   
-    } else if (normBy[1]=="row") {
-        eS <- rowS == 0
-        Hp <- H[!eS,!eS] / rowS[!eS]
-    } else if (normBy[1]=="original") {
-        eS <- colS == 0
-        Hp <- H[!eS,!eS] / colS[!eS]
-    } else cat("No normalistion performed.\n")
-    cat("Calculating eigen vectors. Please wait...")
-    n <- nrow(d2)
-    chooseDims <- function(E) {     # Sub-function to sort and select largest eigenvecs/vals
-        if (ncol(E$vectors) <= ndims) ndims <- ncol(E$vectors) - 1
-        eigOrd <- order(Re(E$values), decreasing = TRUE)
-        E$values <- Re(E$values[eigOrd][startDim:(ndims+1)])
-        E$vectors <- Re(E$vectors[,eigOrd][,startDim:(ndims + 1)]) # Remove first eigen vector
-        rownames(E$vectors) <- colnames(data)[!eS]
-        withNA <- matrix(NA, ncol(data), ncol(E$vectors),
-                         dimnames=list(colnames(data), 1:ncol(E$vectors)))
-        withNA[rownames(E$vectors),] <- E$vectors[rownames(E$vectors),]
-        E$vectors <- withNA
-        return(E)
-    }
-    if (useARPACK) {
-        decomp <- rARPACK::eigs(Hp, which = "LR", k = ndims + 1)
-        if (removeFirst) {
-            startDim <- 2
-        } else startDim <- 1
-        decomp <- chooseDims(decomp)
-        decomp$usedARPACK <- TRUE
-    } else {   
-        decomp <- eigen(Hp)                      # Eigen decomposition
-        if (removeFirst) {
-            startDim <- 2
-        } else startDim <- 1
-        decomp <- chooseDims(decomp)
-        decomp$nconv <- integer(0)
-        decomp$niter <- integer(0)
-        decomp$usedARPACK <- FALSE
-    }
-    if (length(which(eS)) != 0) cat(paste("\nWarning:\nCells \"", paste(names(which(eS)), collapse = ", "), "\" have no transitions and have been removed from the analysis\n", sep=""))
-    decomp$nn <- nnp
-    return(decomp)
-}
 
 ##' Normalises and performs technical noise analysis for single cell RNAseq(Brennecke et al.)
 ##'
@@ -999,117 +914,6 @@ smoothGn <- function(data, bs="tp", family=gaussian(), n=length(data), ...) {
                 family=gaussian()), ...)
 }
 
-##' Look up available databases on Enrichr
-##'
-##' Look up available databases on Enrichr
-##' @title Look up available databases on Enrichr
-##' @return dataframe of available Enrichr databases
-##' @author Wajid Jawaid
-##' @importFrom httr GET POST
-##' @importFrom rjson fromJSON
-##' @export
-listEnrichrDbs <- function() {
-    dfSAF <- options()$stringsAsFactors
-    options(stringsAsFactors = FALSE)
-    dbs <- GET(url="http://amp.pharm.mssm.edu/Enrichr/datasetStatistics")$content
-    dbs <- intToUtf8(dbs)
-    dbs <- fromJSON(dbs)
-    dbs <- lapply(dbs$statistics, function(x) do.call(cbind.data.frame, x))
-    dbs <- do.call(rbind.data.frame, dbs)
-    options(stringsAsFactors = dfSAF)
-    dbs
-}
-
-##' Gene enrichment using Enrichr
-##'
-##' Gene enrichment using Enrichr
-##' @title Gene enrichment using Enrichr
-##' @param genes Character vector of gene names or dataframe of gene names in
-##' in first column and a score between 0 and 1 in the other.
-##' @param databases Character vector of databases to search.
-##' See http://amp.pharm.mssm.edu/Enrichr/ for available databases.
-##' @return Returns a data frame of enrichment terms, p-values, ...
-##' @author Wajid Jawaid
-##' @importFrom httr GET POST
-##' @importFrom rjson fromJSON
-##' @export
-enrichr <- function(genes, databases = NULL) {
-    if (is.null(databases)) {
-        dbs <- c("ChEA 2015", "Epigenomics Roadmap HM ChIP-seq",
-         "ENCODE and ChEA Consensus TFs from ChIP-X",
-         "TF-LOF Expression from GEO", "ENCODE Histone Modifications 2015",
-         "Transcription Factor PPIs", "KEGG 2016", "WikiPathways 2016", "CORUM",
-         "SILAC Phosphoproteomics", "Humancyc 2016", "NCI-Nature 2016", "Panther 2016",
-         "GO Biological Process 2015", "GO Cellular Component 2015",
-         "GO Molecular Function 2015",
-         "MGI Mammalian Phenotype Level 3", "MGI Mammalian Phenotype Level 4",
-         "Human Phenotype Ontology", "OMIM Disease", "OMIM Expanded",
-         "Mouse Gene Atlas", "Human Gene Atlas", "Cancer Cell Line Encyclopedia",
-         "ESCAPE")
-        databases <- gsub(" ", "_", dbs)
-    }
-    cat("Uploading data to Enrichr... ")
-    if (is.vector(genes)) {
-        temp <- POST(url="http://amp.pharm.mssm.edu/Enrichr/enrich",
-                     body=list(list=paste(genes, collapse="\n")))
-    } else if (is.data.frame(genes)) {
-        temp <- POST(url="http://amp.pharm.mssm.edu/Enrichr/enrich",
-                     body=list(list=paste(paste(genes[,1], genes[,2], sep=","),
-                                          collapse="\n")))
-    } else {
-        warning("genes must be a vector of gene names or a dataframe with genes and score.")
-    }
-    GET(url="http://amp.pharm.mssm.edu/Enrichr/share")
-    cat("Done.\n")
-    dbs <- as.list(databases)
-    dfSAF <- options()$stringsAsFactors
-    options(stringsAsFactors = FALSE)
-    result <- lapply(dbs, function(x) {
-        cat("  Querying ", x, "... ", sep="")
-        r <- GET(url="http://amp.pharm.mssm.edu/Enrichr/export",
-                 query=list(file="API", backgroundType=x))
-        r <- intToUtf8(r$content)
-        tc <- textConnection(r)
-        r <- read.table(tc, sep = "\t", header = TRUE, quote = "")
-        close(tc)
-        cat("Done.\n")
-        return(r)
-    })
-    options(stringsAsFactors = dfSAF)
-    cat("Parsing results... ")
-    names(result) <- dbs
-    cat("Done.\n")
-    return(result)
-}
-
-##' Print Enrichr output.
-##'
-##' Print Enrichr output to text file.
-##' @title Print Enrichr output to text file.
-##' @param data Output from Enrichr function.
-##' @param file Name of output file.
-##' @param sep Default TAB. How to separate fields.
-##' @param columns Columns from each entry of data.
-##' 1-"Index", 2-"Name", 3-"Adjusted_P-value", 4-"Z-score"         
-##' 5-"Combined_Score", 6-"Genes", 7-"Overlap_P-value" 
-##' @return Produces file.
-##' @author Wajid Jawaid
-##' @export
-printEnrich <- function (data, file, sep = "\t", columns = c(2,3,6)) {
-    enrich <- file(file, "w")
-    for (i in 1:length(data)) {
-        writeLines(names(data)[i], enrich)
-        n <- nrow(data[[i]])
-        if (n > 10) n <- 10
-        if (n > 0) {
-            writeLines(paste(apply(data[[i]][1:n, columns, drop=FALSE], 1,
-                                   function(x) paste(x, collapse = sep)),
-                             collapse = "\n"), enrich)
-        writeLines("\n", enrich)
-        }
-    }
-    close(enrich)
-}
 
 ##' Differential expression
 ##'
@@ -1527,227 +1331,6 @@ writeGeneList <- function(listofGenes, file) {
 }
 
 
-##' Generic diffusion function using automated
-##' individualised sigma calculation
-##'
-##' Generic diffusion function using automated individualised sigma calculation.
-##'
-##' A Gaussian kernel is applied to the chosen distance metric producing
-##' an \eqn{n \times n} square unnormalised symmetric transition matrix, \eqn{A}.
-##' Let \eqn{D} be an \eqn{n \times n} diagonal matrix with row(column) sums of
-##' \eqn{A} as entries. The density corrected transition matrix will now
-##' be:
-##' 
-##' \deqn{D^{-1} A D^{-1}}{D^{-1} * A * D^{-1}}
-##'
-##' and can be normalised:
-##' 
-##' \deqn{B^{-1} D^{-1} A D^{-1}}{B^{-1} * D^{-1} * A * D{^-1}}
-##'
-##' where \eqn{B} is an \eqn{n \times n} diagonal matrix with row sums of
-##' the density corrected transition matrix as entries. The eigen decomposition of
-##' this matrix can be simplified by solving the symmetric system:
-##'
-##' \deqn{B^{-\frac{1}{2}} D^{-1} A D^{-1} B^{-\frac{1}{2}} R^\prime = %
-##'       R^\prime \lambda^\prime}{%
-##'       B^{-0.5} * D^{-1} * A * D^{-1} * B^{-0.5} = R^\prime * L^\prime}
-##'
-##' where \eqn{R^\prime}{R^\prime} is a matrix of the right eigenvectors that solve
-##' the system and \eqn{\lambda^\prime}{L'} is the corresponding eigenvalue
-##' diagonal matrix. Now the solution of:
-##'
-##' \deqn{B^{-1} D^{-1} A D^{-1} R = R \lambda}{%
-##'       B^{-1} * D^{-1} * A * D^{-1} * R = R * L}
-##'
-##' in terms of \eqn{R^\prime} and \eqn{B^{-\frac{1}{2}}} is:
-##'
-##' \deqn{B^{-1} D^{-1} A D^{-1} B^{-\frac{1}{2}} R^\prime = %
-##'       B^{-\frac{1}{2}} R^\prime \lambda^\prime}{%
-##'       B^{-1} * D^{-1} * A * D^{-1} * B^{-0.5} = B^{-0.5} * R' * L'}
-##'
-##' and
-##'
-##' \deqn{R = B^{-\frac{1}{2}} R^\prime}{R = B^{-0.5} * R'}
-##'
-##' This \eqn{R} without the first eigen vector is returned as the diffusion map.
-##' @title Generic diffusion function
-##' @param data Matrix of data with genes in rows and cells in columns.
-##' @param nsig For automatic sigma calculation
-##' @param distfun A different distance function that returns the \strong{squared}
-##' distance
-##' @param sigmas Manually provide sigma
-##' @param sqdistmat \strong{Squared} distance matrix.
-##' Give your own squared distance matrix.
-##' @inheritParams diffuse
-##' @return List output containing:
-##' \tabular{rl}{%
-##'   \emph{values} \tab Eigenvalues, excluding the first eigenvalue, which should%
-##'                       always be 1.\cr
-##'    \emph{vectors} \tab Matrix of eigen vectors in columns, first eigen vector%
-##'                        removed.\cr
-##'    \emph{nconv} \tab Number of eigen vectors/values that converged.\cr
-##'    \emph{niter} \tab Iterations taken for Arnoldi algorithm to converge.\cr
-##'    \emph{nops} \tab  Number of operations. \cr
-##'    \emph{val0} \tab 1st eigen value - should be 1. If not be suspicious!\cr
-##'    \emph{vec0} \tab 1st eigen vector - should be \eqn{n^{-\frac{1}{2}}{1/sqrt(n)}},%
-##'                      where n is the number of cells/samples.\cr
-##'    \emph{usedARPACK} \tab Predicates use of ARPACK for spectral decomposition.\cr
-##'    \emph{distfun} \tab Function used to calculate the squared distance.\cr
-##'    \emph{nn} \tab Number of nearest neighbours used for calculating \code{sigmas}.\cr
-##'    \emph{d2} \tab Matrix of squared distances, returned from \code{distfun}.\cr
-##'    \emph{sigmas} \tab Vector of sigmas. Same length as number of cells if individual\cr
-##'                  \tab sigmas were calculated, otherwise a scalar if was supplied.\cr
-##'    \emph{gaussian} \tab Unnormalised transition matrix after applying Gaussian.\cr
-##'    \emph{markov}  \tab Normalised \code{gaussian} matrix.\cr
-##'    \emph{densityCorrected} \tab Matrix after applying density correction to %
-##'                                 \code{markov}.\cr
-##' }
-##' @author Wajid Jawaid
-##' @references
-##' Haghverdi, L., Buettner, F., Theis, F.J., 2015. Diffusion maps for high-dimensional single-cell analysis of differentiation data. Bioinformatics 31, 2989–2998.
-##'
-##' Haghverdi, L., Büttner, M., Wolf, F.A., Buettner, F., Theis, F.J., 2016. Diffusion pseudotime robustly reconstructs lineage branching. Nat Meth 13, 845–848.
-##'
-##' Angerer, P., Haghverdi, L., Büttner, M., Theis, F.J., Marr, C., Buettner, F., 2016. destiny: diffusion maps for large-scale single-cell data in R. Bioinformatics 32, 1241–1243.
-##' @export
-diffuseMat2 <- function(data, ndims = 20, nsig = 5,
-                        removeFirst = TRUE, useARPACK = TRUE,
-                        distfun = NULL, sigmas = NULL, sqdistmat = NULL) {
-    if (!is.null(sqdistmat)) {
-        d2 <- sqdistmat
-    } else {
-        cat("Calculating distance matrix. Please wait... ")
-        if (is.null(distfun)) {
-            d2 <- as.matrix(fastDist(data, squared = TRUE))       # distance matrix calculation
-        } else d2 <- as.matrix(distfun(data))
-        cat("Done.\n")
-    }
-    if (is.null(sigmas)) {
-        cat("Calculating sigmas. Please wait... ")
-        sigmas <- apply(d2, 1, function(x) sqrt(sort(x)[nsig])/2)
-        cat("Done.\n")
-        cat("Applying Gaussian kernel.\n")
-        W <- applyGaussianKernelwithVariableSigma(d2, sigmas)
-    } else {
-        W <- exp(-d2 / (2*sigmas^2))
-    }
-    diag(W) <- 0
-    cat("Calculating normalised transition matrix.\n")
-    markov <- W / rowSums(W)
-    cat("Performing density correction.\n")
-    D <- rowSums(W)
-    q <- D %*% t(D)                     # Calculate local density
-    H <- W / q                          # Correct for local density
-    dH <- rowSums(H)
-    ## cat("Calculating density corrected normalised transition matrix.\n")
-    ## markovDensityCorrected <- H / dH
-    cat("Calculating related symmetric system.\n")
-    rdH <- 1/sqrt(dH)
-    Hp <- H * (rdH %*% t(rdH))
-    cat("Calculating eigen vectors for symmetric system. Please wait... ")
-    n <- nrow(d2)
-    # Sub-function to sort and select largest eigenvecs/vals
-    if (useARPACK) {                    # Eigen decomposition
-        decomp <- rARPACK::eigs(Hp, which = "LR", k = ndims + 1)
-    } else {   
-        decomp <- eigen(Hp)
-    }
-    colnames(decomp$vectors) <- paste0("DC", 0:(ncol(decomp$vectors)-1))
-    cat(" Done.\nTransforming to eigen vectors of normalised transition matrix ... ")
-    decomp$vectors <- decomp$vectors * rdH
-    rownames(decomp$vectors) <- colnames(data)
-    ## decomp$vectors <- decomp$vectors / sqrt(colSums(H))
-    cat(" Done.\nChoosing dims... ")
-
-    if (removeFirst) {
-        startDim <- 2
-        decomp$val0 <- Re(decomp$values[1])
-        decomp$vec0 <- Re(decomp$vectors[,1])
-        decomp$values <- Re(decomp$values[-1])
-        decomp$vectors <- Re(decomp$vectors[,-1])
-    } else startDim <- 1
-    cat(" Done.\n")
-    if (!useARPACK) decomp$nconv <- decomp$niter <- integer(0)
-    decomp$usedARPACK <- useARPACK
-    decomp$distfun <- distfun
-    decomp$nn <- nsig
-    decomp$d2 <- d2
-    decomp$sigmas <- sigmas
-    rownames(W) <- colnames(W)
-    decomp$gaussian <- W
-    rownames(markov) <- colnames(markov)
-    decomp$markov <- markov
-    rownames(H) <- colnames(H)
-    decomp$densityCorrected <- H
-    return(decomp)
-}
-
-##' Predicts diffusion map projection from new data points
-##'
-##' Predicts diffusion map projection from new data points
-##' @title Predicts diffusion map projection from new data points
-##' @param dm Output from diffuseMat2 function
-##' @param x Matrix of new data points. Features in rows and cells in
-##' columns.
-##' @param data Original data used to generate diffusion map
-##' @param distfun A distance function that takes new data as first
-##' paramter and previous data as second variable returning a squared
-##' distance measure, with each sample in the rows and distance to
-##' previous data points in columns, e.g. function(x, y) (1 - cor(x, y))^2.
-##' @return Returns a matrix with projected diffusion components.
-##' @author Wajid Jawaid
-##' @export
-diffuseProj <- function(dm, x, data, distfun) {
-    ## Calculate new distances
-    d2 <- distfun(x, data)             # dim(d2) is ncols(x) by ncols(data)
-    if (length(dm$sigmas) == 1) {
-        W <- exp(-d2 / (2*dm$sigmas^2))    # Gaussian Kernel
-    } else {
-        #Find distance to nsig cell then / 2.
-        sigmas <- apply(d2, 1, function(x) sqrt(sort(x)[dm$nn])/2)
-        W <- applyGaussianKernelwithVariableSigma(d2, sigmas, dm$sigmas)
-    }
-    ## diag(W) <- 0                       # No self-transitions
-    W[which(W == 1)] <- 0
-    ## Perform density normalisation by dividing by the product of the sums of
-    ## incoming and outgoing weights
-    H <- W / rowSums(W)
-    H <- t(t(H) / rowSums(dm$gaussian))
-    ## Make markovian
-    Hp <-  H / rowSums(H)
-    predMat <- Hp %*% cbind(dm$vec0, dm$vectors) %*% diag(c(1, 1/dm$values))
-    colnames(predMat) <- paste0("DC", 0:(ncol(predMat)-1))
-    rownames(predMat) <- colnames(x)
-    predMat[,-1, drop=FALSE]
-}
-
-##' Apply Gaussian Kernel using Laleh Haghverdi's variable sigma
-##'
-##' Apply Gaussian Kernel using Laleh Haghverdi's variable sigma
-##' @title Apply Gaussian Kernel using Laleh Haghverdi's variable sigma
-##' @param d2 Squared distance metric
-##' @param rsigmas Sigmas for cells in the rows
-##' @param csigmas Sigmas for cells in the columns
-##' @return Returns matrix of same size as d2.
-##' @author Wajid Jawaid
-applyGaussianKernelwithVariableSigma <- function(d2, rsigmas, csigmas = NULL) {
-    if (is.null(csigmas)) {
-        sigmaMat <- rsigmas %*% t(rsigmas)
-        sigmaSqd <- rsigmas^2
-        sigmaSum <- expand.grid(1:length(sigmaSqd), 1:length(sigmaSqd))
-        sigmaSum <- sigmaSqd[sigmaSum[,1]] + sigmaSqd[sigmaSum[,2]]
-        sigmaSum <- matrix(sigmaSum, length(sigmaSqd))
-    } else {
-        sigmaMat <- rsigmas %*% t(csigmas)
-        rsigmaSqd <- rsigmas^2
-        csigmaSqd <- csigmas^2
-        sigmaSum <- expand.grid(1:length(rsigmaSqd), 1:length(csigmaSqd))
-        sigmaSum <- rsigmaSqd[sigmaSum[,1]] + csigmaSqd[sigmaSum[,2]]
-        sigmaSum <- matrix(sigmaSum, length(rsigmaSqd))
-    }
-    W <- sqrt(2*sigmaMat / sigmaSum) * exp(-d2 / sigmaSum)
-}
-
 ##' Plots QC from SCD
 ##'
 ##' Plots QC from SCD
@@ -1864,7 +1447,9 @@ plotLegend <- function(x, mpar = list(mar=c(4,4,2,2))) {
 ##' @export
 ##' @importFrom stats nls coefficients qnorm predict.lm
 
-logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE, residualsInLogSpace = TRUE, quadratic = TRUE, se = qnorm(p = 0.975)) {
+logVarGenes <- function(scd, minMean = 0, fraction = 0.05, lower = FALSE,
+                        residualsInLogSpace = TRUE, quadratic = TRUE,
+                        se = qnorm(p = 0.975)) {
     if (fraction >= 1) {
         stop("Fraction must be [0,1)")
     } else if (fraction > 0) {
@@ -1941,9 +1526,13 @@ ggCol <- function(x, alpha = 1, returnFull = TRUE, remix = TRUE) {
         }
     }
     if (returnFull && (length(x) > 1)) {
-        return(ggColors[x])
-    } else return(ggColors)
-    
+        retVal <- ggColors[x]
+        names(retVal) <- x
+    } else {
+        retVal <- ggColors
+        names(retVal) <- levels(x)
+    }
+    return(retVal)
 }
 
 ##' Winsorization function
@@ -1966,31 +1555,6 @@ winsor <- function (x, fraction=0.05, lower = FALSE) {
     
 }
 
-##' Generate a sparse Markov matrix for momentum method to generate training data
-##'
-##' Generate a sparse Markov matrix for momentum method to generate training data
-##' @title Generate a sparse Markov matrix for momentum method to generate training data.
-##' Utilises two approaches. First removes edges that are below a threshold for the probability if n number of cells are equally connected, i.e. if all cells are connected all will have an equal but low transition probability and this may be considered to be a disconnected node.
-##' Second cells that are more highly connected are allowed to keep greater number of nearest neoghbours.
-##' @param x Square matrix representing proximity. Try using Gaussian kernel from
-##' maps.
-##' @param nn Default ceiling(rowSums(x)). Number of nearest neighbours. The default tries
-##' to ensure that highly connected nodes remain highly connected.
-##' @param n Number of cells with equal binding threshold.
-##' @return Returns normalised transition matrix.
-##' @author Wajid Jawaid
-##' @export
-sparseMarkov <- function(x, nn = ceiling(rowSums(x)), n = ncol(x) - 1) {
-    if (!is.null(nn)) {
-        for (i in 1:nrow(x)) {
-            nndist <- sort(x[i,], decreasing = TRUE)[nn[i]]
-            x[i,] <- (x[i,] >= nndist) * x[i,]
-            x[i,] <- x[i,] / sum(x[i,])
-        }
-    }
-    x[x < (1/n)] <- 0
-    x
-}
 
 ##' Louvain clustering on transition matrix
 ##'
@@ -2024,13 +1588,17 @@ findLouvain <- function(mkv) {
 ##' @param scd Single Cell Dataset object
 ##' @param pcaDims Number of dimensions to use
 ##' @param nsig knn for automatic sigma calculation
-##' @param dist Provide distance matrix to speed up clustering
+##' @param d2 Optionally supply distance matrix
+##' @param sim Optionally supply similiarity matrix
 ##' @param plotDims Number of dimensions to use on Fruchter-Reingold layout
 ##' of graph.
 ##' @param layoutIter Number of iterstions to run Fruchterman-Reingold graph 
 ##' @return List
 ##' @author Wajid Jawaid
 ##' @importFrom igraph layout_with_fr
+##' @importFrom stats dist
+##' @importFrom roots applyGaussianKernelwithVariableSigma
+##' @importFrom roots diffuseMat sparseMarkov
 ##' @export
 clustLouvain <- function(scd, pcaDims = 50, nsig = 20, d2 = NULL, sim = NULL, plotDims = 3,
                          layoutIter = 1000) {
@@ -2048,7 +1616,7 @@ clustLouvain <- function(scd, pcaDims = 50, nsig = 20, d2 = NULL, sim = NULL, pl
                        format(sum(eigenvals(getPCA(scd))[1:pcaDims])*100, digits = 3),
                        "% of the variance."))
     abline(v = numDims, lty = 2, col = "red")
-    ## y <- diffuseMat2(exprs(scd), distfun = function(x) (1-cor(x))^2, nsig = 10,
+    ## y <- diffuseMat(exprs(scd), distfun = function(x) (1-cor(x))^2, nsig = 10,
     ##                  sqdistmat = cosineSqDistAll)
     if (is.null(d2)) {
         cat("Calculating distances ... ")

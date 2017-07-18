@@ -5,6 +5,7 @@ Authors@R: person("Wajid", "Jawaid", email = "wj241@cam.ac.uk", role = c("aut", 
 Description: A toolkit for single cell RNAseq analysis.
 Depends:
     R (>= 3.1.2),
+    roots,
     methods,
     igraph,
     rgl,

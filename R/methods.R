@@ -916,12 +916,13 @@ setMethod("runTSNE", "SCD", function(object, ndims = 3, perplexity = 30, theta =
 ##' @inheritParams diffuse
 ##' @return Single Cell Data object with diffusion map
 ##' @author Wajid Jawaid
+##' @importFrom roots diffuseMat
 ##' @export
 setMethod("diffuse", "SCD", function(object, ndims = 4, nn = 0.2, sigma = NULL,
                                      removeFirst = TRUE, useARPACK = TRUE,
                                      distfun = NULL) {
     data <- exprs(object)
-    decomp <- diffuseMat2(data, ndims=ndims, nsig=nn, sigmas=sigma, removeFirst=removeFirst,
+    decomp <- diffuseMat(data, ndims=ndims, nsig=nn, sigmas=sigma, removeFirst=removeFirst,
                           useARPACK=useARPACK, distfun = distfun)
     object@diffMap <- new("DiffusionMap",
                           eigenvalues = decomp$values,
