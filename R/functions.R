@@ -6,7 +6,7 @@
 ##' @importFrom RColorBrewer brewer.pal
 ##' @import grDevices
 ##' @import graphics
-##' @importFrom stats as.dendrogram as.dist cor density dist filter fitted.values gaussian hclust median order.dendrogram p.adjust pchisq prcomp predict quantile reorder sd var lm
+##' @importFrom stats as.dendrogram as.dist cor density dist fitted.values gaussian hclust median order.dendrogram p.adjust pchisq prcomp predict quantile reorder sd var lm
 ##' @import utils
 ##' @import methods
 ##' @importFrom igraph graph.adjacency minimum.spanning.tree get.diameter get.shortest.paths get.edgelist E
@@ -14,14 +14,15 @@
 ##' @importFrom rgl plot3d par3d rgl.cur r3dDefaults open3d rgl.postscript text3d points3d segments3d lines3d selectpoints3d
 ##' @import Rtsne
 ##' @import Biobase
+##' @import scater
 ##' @importMethodsFrom BiocGenerics counts
 
 
-require(Biobase, quietly = TRUE)
-require(igraph, quietly = TRUE)
-require(rgl, quietly = TRUE)
-require(ggplot2, quietly = TRUE)
-require(Rtsne, quietly = TRUE)
+suppressMessages(require(Biobase, quietly = TRUE))
+suppressMessages(require(igraph, quietly = TRUE))
+suppressMessages(require(rgl, quietly = TRUE))
+suppressMessages(require(ggplot2, quietly = TRUE))
+suppressMessages(require(Rtsne, quietly = TRUE))
 
 
 if (version$os == "linux-gnu") {
@@ -34,20 +35,28 @@ if (version$os == "linux-gnu") {
 ##' @title Make a new SCD object
 ##' @param experimentType Experiment Type. RNAseq or qPCR.
 ##' @param assayData Matrix of data with genes in rows and cells in columns
-##' @param genoData Data frame of gene names with geneIds in rownames. Rownames must match rownames of assayData.
-##' @param phenoData Data frame of further details for each cell. Rownames must match column names of assayData.
+##' @param featureData Data frame of further details for each gene. Rownames must
+##' match row names of assayData.
+##' @param phenoData Data frame of further details for each cell. Rownames must
+##' match column names of assayData.
 ##' @param counts Raw counts data.
 ##' @param spike Default NULL. Include spike-in data e.g. ERCC-92.
 ##' @param qc Default NULL. Include quality control counts from HTseq for example.
+##' @param cellPairwiseDistances CPW
+##' @param featurePairwiseDistances FPW
 ##' @param ... Further parameters.
 ##' @return New Single Cell Dataset object.
 ##' @author Wajid Jawaid
 ##' @export
-newSCD <- function(experimentType, assayData = NULL, genoData, phenoData, counts, spike = NULL,
-                   qc = NULL, ...) {
+newSCD <- function(experimentType, assayData = NULL, featureData, phenoData,
+                   counts, spike = NULL, qc = NULL,
+                   cellPairwiseDistances = dist(vector()),
+                   featurePairwiseDistances = dist(vector()), ...) {
     if (is.null(assayData)) assayData = counts
-    new("SCD", experimentType = experimentType, exprs = assayData, assayData = assayData,
-        genoData = genoData, phenoData = phenoData, counts = counts, spike = spike, qc = qc, ...)
+    new("SCD", experimentType = experimentType, assayData = assayData,
+        featureData = featureData, phenoData = phenoData, countData = counts,
+        spike = spike, qc = qc, cellPairwiseDistances = cellPairwiseDistances,
+        featurePairwiseDistances = featurePairwiseDistances, ...)
 }
 
 subsetData <- function(x, pD, filters) {
@@ -668,13 +677,20 @@ estSizeFact <- function(x) {
 ##' @param data.lengths Gene lengths in kilobases for PK "per kilobase normalisation"
 ##' @param ercc.lengths ERCC lengths in kilobases for PK "per kilobase normalisation"
 ##' @param meanForFit Provide a minimum mean for fit. (OPTIONAL)
+##' @param renormalise Default FALSE. Renormalise or not. Will only work with "DESeq"
+##' normalisation method
 ##' @return Returns a list
 ##' @importFrom statmod glmgam.fit
 ##' @author Wajid Jawaid
 techVarSub <- function(object, data.ercc = NULL, cvThresh=.3, quant=.8, minBiolDisp=.5^2,
-                       fdr=.1, data.lengths = NULL, ercc.lengths = NULL, meanForFit=NULL) {
+                       fdr=.1, data.lengths = NULL, ercc.lengths = NULL, meanForFit=NULL,
+                       renormalise = FALSE) {
     tData <- counts(object)
-    sf.data <- estSizeFact2(tData)
+    if (object@normalise == "DESeq" && renormalise) {
+        sf.data <- estSizeFact2(tData)
+    } else {
+        sf.data <- sf(object)
+    }
     tData <- t(t(tData) / sf.data)
     aMean <- rowMeans(tData)
     cv2a <- (apply(tData,1,sd) / aMean)^2
@@ -1239,8 +1255,8 @@ doDESeq <- function(scd, group1, group2, fdr, gene= NULL, rmPattern = NULL, minC
                     nMinCells = ceiling(min(length(group1), length(group2))/2)) {
     cells <- c(group1, group2)
     if (is.null(gene)) {
-        temp <- scd@counts[, cells]   
-    } else temp <- scd@counts[gene, cells]
+        temp <- assayDataElement(scd, "counts")[, cells]   
+    } else temp <- assayDataElement(scd, "counts")[gene, cells]
     temp2 <- pData(scd)[cells,]
     numCellsGeneExpr <- apply(temp, 1, function(x) sum(x>0))
     gene <- names(numCellsGeneExpr)[numCellsGeneExpr > nMinCells]

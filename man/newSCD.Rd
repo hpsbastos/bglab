@@ -4,23 +4,30 @@
 \alias{newSCD}
 \title{Make a new SCD object}
 \usage{
-newSCD(experimentType, assayData = NULL, genoData, phenoData, counts,
-  spike = NULL, qc = NULL, ...)
+newSCD(experimentType, assayData = NULL, featureData, phenoData, counts,
+  spike = NULL, qc = NULL, cellPairwiseDistances = dist(vector()),
+  featurePairwiseDistances = dist(vector()), ...)
 }
 \arguments{
 \item{experimentType}{Experiment Type. RNAseq or qPCR.}
 
 \item{assayData}{Matrix of data with genes in rows and cells in columns}
 
-\item{genoData}{Data frame of gene names with geneIds in rownames. Rownames must match rownames of assayData.}
+\item{featureData}{Data frame of further details for each gene. Rownames must
+match row names of assayData.}
 
-\item{phenoData}{Data frame of further details for each cell. Rownames must match column names of assayData.}
+\item{phenoData}{Data frame of further details for each cell. Rownames must
+match column names of assayData.}
 
 \item{counts}{Raw counts data.}
 
 \item{spike}{Default NULL. Include spike-in data e.g. ERCC-92.}
 
 \item{qc}{Default NULL. Include quality control counts from HTseq for example.}
+
+\item{cellPairwiseDistances}{CPW}
+
+\item{featurePairwiseDistances}{FPW}
 
 \item{...}{Further parameters.}
 }

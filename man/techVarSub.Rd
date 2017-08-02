@@ -6,7 +6,7 @@
 \usage{
 techVarSub(object, data.ercc = NULL, cvThresh = 0.3, quant = 0.8,
   minBiolDisp = 0.5^2, fdr = 0.1, data.lengths = NULL,
-  ercc.lengths = NULL, meanForFit = NULL)
+  ercc.lengths = NULL, meanForFit = NULL, renormalise = FALSE)
 }
 \arguments{
 \item{object}{SCD object}
@@ -28,6 +28,9 @@ plateau at lower gene expression values. See Breenecke et al. for further detail
 \item{ercc.lengths}{ERCC lengths in kilobases for PK "per kilobase normalisation"}
 
 \item{meanForFit}{Provide a minimum mean for fit. (OPTIONAL)}
+
+\item{renormalise}{Default FALSE. Renormalise or not. Will only work with "DESeq"
+normalisation method}
 }
 \value{
 Returns a list

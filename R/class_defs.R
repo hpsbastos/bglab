@@ -28,6 +28,26 @@ setClass("reducedDim", representation = representation(
          )
 
 
+
+#####################################################################
+## Other Reduced Dimensionsality (Inherits from Reduced Dimension) ##
+#####################################################################
+
+##' Other dimensionality redcution
+##' @export
+setClass("goggles", representation = representation(
+                         "reducedDim",
+                         l = "matrix",
+                         clust = "list",
+                         adj = "matrix",
+                         dmat = "matrix",
+                         pca = "matrix",
+                         sparse = "numeric",
+                         nadj = "matrix",
+                         nadja = "matrix",
+                         seed = "numeric"
+                     ))
+
 ###############################################################################################
 ######################### PCA Class (Inherits from Reduced Dimension) #########################
 ###############################################################################################
@@ -148,13 +168,14 @@ setClass("Isomap", representation = representation(
 ##' @slot spike Spike-in matrix.
 ##' @slot qcCounts Quality Control matrix.
 ##' @slot filterQC Default TRUE. Will not return cells that failed QC when set to TRUE.
+##' @slot normalise Either "DESeq" or "scran".
 ##' @slot qcOutput List containing QC output.
 ##' @slot technicalNoise List containing technical noise output.
 ##' Highly recommended.
 ##' @export
 setClass("SCD",
+         contains = "SCESet", 
          representation = representation(
-             "ExpressionSet",
              useFilter = "logical",
              filterGene = "logical",
              filterCell = "logical",
@@ -162,15 +183,18 @@ setClass("SCD",
              diffMap = "DiffusionMap",
              tsne="TSNE",
              isomap="Isomap",
+             ## goggles = "goggles",
              counts="matrix",
              spike="matrix",
              qcCounts="matrix",
              filterQC="logical",
+             normalise="character",
              qcOutput="list",
              technicalNoise="list"
              ),
          prototype = prototype(
-             ExpressionSet = new("ExpressionSet"),
+             SCESet = new("SCESet", cellPairwiseDistances = dist(vector()),
+                          featurePairwiseDistances = dist(vector())),
              useFilter = TRUE,
              filterGene = TRUE,
              filterCell = TRUE,
@@ -178,10 +202,12 @@ setClass("SCD",
              diffMap = new("DiffusionMap"),
              tsne=new("TSNE"),
              isomap=new("Isomap"),
+             ## goggles = new("goggles"),
              counts=new("matrix"),
              spike=new("matrix"),
              qcCounts=new("matrix"),
              filterQC = TRUE,
+             normalise=character(),
              qcOutput = list(),
              technicalNoise = list()
              ),
@@ -192,9 +218,9 @@ setClass("SCD",
                  isValid <- FALSE
                  cat("Unknown experiment type. Please use \"RNAseq\" or \"qPCR\".\n")
              }
-             data <- exprs(object)
-             geneIds <- rownames(data)
-             cellIds <- colnames(data)
+             ## data <- exprs(object)
+             geneIds <- rownames(object)
+             cellIds <- colnames(object)
              geneData <- split(t(fData(object)), f = colnames(fData(object)))
              whichCol <- lapply(geneData, function(x) !(any(is.na(match(geneIds, x)))))
              whichCol <- do.call(c, whichCol)
@@ -206,4 +232,11 @@ setClass("SCD",
              return(isValid)
          }
          )
+
+setValidity("SCD", function(object) {
+    msg <- NULL
+    valid <- TRUE
+    if(valid) TRUE else msg
+})
+
 

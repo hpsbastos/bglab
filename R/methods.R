@@ -358,7 +358,7 @@ setMethod("eigenvecs", "DiffusionMap", function(object) object@eigenvectors)
 ##' @param .Object Single Cell Dataset object to be created
 ##' @param experimentType Either "RNAseq" or "qPCR"
 ##' @param assayData Annotated matrix of gene expression data
-##' @param genoData Annotated data frame of gene information. One column must match rownames
+##' @param featureData Annotated data frame of gene information. One column must match rownames
 ##' in \code{assayData} the gene expression annotated matrix.
 ##' @param phenoData Annotated data frame of phenotype information. One column must match the colnames in \code{assayData} the gene expression annotated matrix.
 ##' @param spike Default NULL. Include spike-in data e.g. ERCC-92.
@@ -367,11 +367,11 @@ setMethod("eigenvecs", "DiffusionMap", function(object) object@eigenvectors)
 ##' @return Returns a newly initialised SCD object
 ##' @author Wajid Jawaid
 setMethod("initialize", "SCD", function(.Object, experimentType, assayData,
-                                        genoData, phenoData, spike = NULL, qc = NULL, ...) {
+                                        featureData, phenoData, spike = NULL, qc = NULL, ...) {
     .Object@useFilter <- TRUE
     geneIds <- rownames(assayData)
     cellIds <- colnames(assayData)
-    data <- prepData(geneIds, genoData, "genodata")
+    data <- prepData(geneIds, featureData, "genodata")
     featureData <- new("AnnotatedDataFrame", data=data,
                           varMetadata=data.frame(colnames(data)))
     data <- prepData(cellIds, phenoData, "phenodata")
@@ -379,10 +379,13 @@ setMethod("initialize", "SCD", function(.Object, experimentType, assayData,
                      varMetadata=data.frame(colnames(data)))
     if (!is.null(spike)) {
         cellsInData <- colnames(spike)
-        missingCells <- setdiff(colnames(assayData), cellsInData)
-        missingCells <- matrix(nrow=nrow(spike), ncol=length(missingCells),
-                               dimnames=list(rownames(spike), missingCells))
-        spike <- cbind(spike, missingCells)
+        missingCells <- setdiff(cellIds, cellsInData)
+        if (length(missingCells) != 0) {
+            warning("Spike-in counts only available for a subset of cells.")
+            missingCells <- matrix(nrow=nrow(spike), ncol=length(missingCells),
+                                   dimnames=list(rownames(spike), missingCells))
+            spike <- cbind(spike, missingCells)
+        }
         data <- spike[,cellIds]
         attr(data, "cellsInData") <- cellsInData
         .Object@spike <- data
@@ -390,29 +393,146 @@ setMethod("initialize", "SCD", function(.Object, experimentType, assayData,
     if (!is.null(qc)) {
         cellsInData <- colnames(qc)
         missingCells <- setdiff(colnames(assayData), cellsInData)
-        missingCells <- matrix(nrow=nrow(qc), ncol=length(missingCells),
-                               dimnames=list(rownames(qc), missingCells))
-        qc <- cbind(qc, missingCells)
+        if (length(missingCells != 0)) {
+            warning("QC counts only available for a subset of cells.")
+            missingCells <- matrix(nrow=nrow(qc), ncol=length(missingCells),
+                                   dimnames=list(rownames(qc), missingCells))
+            qc <- cbind(qc, missingCells)
+        }
         data <- qc[,cellIds]
         attr(data, "cellsInData") <- cellsInData
         .Object@qcCounts <- data
     }
-    callNextMethod(.Object, annotation=experimentType, featureData=featureData,
-                   phenoData=phenoData, ...)
+    .Object@annotation = experimentType
+    callNextMethod(.Object, phenoData=phenoData, featureData = featureData, ...)
 })
+
+
+setMethod("initialize", "SCESet",
+  function(.Object, exprsData = NULL, countData = NULL, tpmData = NULL, 
+           fpkmData = NULL, cpmData = NULL, phenoData = NULL,
+           featureData = NULL, experimentData = NULL,
+           is_exprsData = NULL, cellPairwiseDistances = dist(vector()), 
+           featurePairwiseDistances = dist(vector()),
+           lowerDetectionLimit = NULL, logExprsOffset = NULL, assayData = NULL,
+           ...) {
+      if (is.null(assayData)) {
+          have.data <- NULL
+          for (dataname in c("countData", "tpmData", "cpmData", "fpkmData", 
+                             "exprsData")) {
+              eData <- get(dataname)
+              if (!is.null(eData)) {
+                  if (!is.null(have.data)) {
+                      warning(sprintf("'%s' provided, '%s' will be ignored", 
+                                      have.data, dataname))
+                      assign(dataname, NULL)
+                  }
+                  else {
+                      assign(dataname, as.matrix(eData))
+                      have.data <- dataname
+                  }
+              }
+          }
+          if (is.null(have.data)) {
+              ## stop("one set of expression values should be supplied")
+              countData <- matrix()
+              have.data <- "countData"
+          }
+          if (!is.null(is_exprsData)) {
+              if (have.data != "exprsData") {
+                  warning(sprintf("'%s' provided, 'is_exprsData' will be ignored", 
+                                  have.data))
+                  is_exprsData <- NULL
+              }
+              else {
+                  is_exprsData <- as.matrix(is_exprsData)
+              }
+          }
+          if (is.null(logExprsOffset)) {
+              logExprsOffset <- 1
+              if (have.data != "countData") {
+                  warning("'logExprsOffset' should be set manually for non-count data")
+              }
+          }
+          if (is.null(lowerDetectionLimit)) {
+              lowerDetectionLimit <- 0
+              if (have.data == "exprsData") {
+                  warning("'lowerDetectionLimit' should be set manually for log-expression values")
+              }
+          }
+          if (have.data == "countData") {
+              exprsData <-
+                  scater:::.compute_exprs(countData, size_factors = colSums(countData), 
+                                          log = TRUE, sum = FALSE,
+                                          logExprsOffset = logExprsOffset)
+              dimnames(exprsData) <- dimnames(countData)
+          }
+          else if (have.data != "exprsData") {
+              exprsData <- log2(get(have.data) + logExprsOffset)
+          }
+          assaydata <- assayDataNew("environment", exprs = exprsData)
+          if (!is.null(is_exprsData)) 
+              assaydata[["is_exprs"]] <- is_exprsData
+          if (!is.null(tpmData)) 
+              assaydata[["tpm"]] <- tpmData
+          if (!is.null(fpkmData)) 
+              assaydata[["fpkm"]] <- fpkmData
+          if (!is.null(countData)) 
+              assaydata[["counts"]] <- countData
+          if (!is.null(cpmData)) 
+              assaydata[["cpm"]] <- cpmData
+      } else assaydata <- assayData
+      if (is.null(phenoData)) 
+          phenoData <- annotatedDataFrameFrom(exprsData, byrow = FALSE)
+      if (is.null(featureData)) 
+          featureData <- annotatedDataFrameFrom(exprsData, byrow = TRUE)
+      expData_null <- new("MIAME", name = "<your name here>", lab = "<your lab here>", 
+                          contact = "<email address>", title = "<title for this dataset>", 
+                          abstract = "An SCESet", url = "<your website here>", 
+                          other = list(notes = "This dataset created from ...", 
+                                       coauthors = c("")))
+      if (!is.null(experimentData)) {
+          if (is(experimentData, "MIAME")) 
+              expData <- experimentData
+          else {
+              expData <- expData_null
+              warning("'experimentData' is not an 'MIAME' object, setting to an empty object")
+          }
+      }
+      else {
+          expData <- expData_null
+      }
+      storageMode(assaydata) <- "lockedEnvironment"
+      .Object@assayData <- assaydata
+      .Object@phenoData <- phenoData
+      .Object@featureData <- featureData
+      .Object@experimentData <- expData
+      .Object@cellPairwiseDistances <- cellPairwiseDistances
+      .Object@featurePairwiseDistances <- featurePairwiseDistances
+      .Object@lowerDetectionLimit <- lowerDetectionLimit
+      .Object@logExprsOffset <- logExprsOffset
+      .Object@featureControlInfo <- AnnotatedDataFrame()
+      .Object@protocolData <- AnnotatedDataFrame(
+          data.frame(labelDescription = rownames(phenoData),
+                     row.names = rownames(phenoData)))
+      .Object
+      ## callNextMethod(.Object, assayData = assayData, annotation=experimentType,
+      ##                featureData=featureData, phenoData=phenoData, ...)
+  })
 
 ##' Retrieve gene expression data from Single Cell Dataset object
 ##'
 ##' Retrieve gene expression data from Single Cell Dataset object
 ##' @title Retrieve gene expression data from Single Cell Dataset object
 ##' @param object SCD
-##' @return etrix of expression values
+##' @return matrix of expression values
 ##' @author Wajid Jawaid
 ##' @export
 setMethod("exprs", "SCD", function(object) {
-    x <- assayDataElement(object, "exprs")
     fD <- pData(featureData(object))
-    if (filterGene(object)) x <- x[fD[,"included"],]
+    if (filterGene(object)) {
+        x <- assayDataElement(object, "exprs")[fD[,"included"],]
+    } else x <- assayDataElement(object, "exprs")
     x <- subsetData(x, pData(phenoData(object)), saveFilters(object))
 })
 
@@ -449,7 +569,7 @@ setMethod("sf", "SCD", function(object, type="bio"){
 ##' @author Wajid Jawaid
 ##' @export
 setMethod("counts", "SCD", function(object, ...) {
-    x <- object@counts
+    x <- assayDataElement(object, "counts")
     fD <- pData(featureData(object))
     if (filterGene(object) && useFilter(object)) x <- x[rownames(fD)[fD[,"included"]],]
     x <- subsetData(x, pData(phenoData(object)), saveFilters(object))
@@ -1255,9 +1375,9 @@ setMethod("performQC", signature(object="SCD"),
               htseqQC <- qc(object)
               htseqQC <- htseqQC[,attr(htseqQC, "cellsInData")]
               if (length(qcFeatures) > 1) {
-               htseqQC <- htseqQC[qcFeatures,]   
+                  htseqQC <- htseqQC[qcFeatures,]   
               } else if (qcFeatures != "ALL") {
-               htseqQC <- htseqQC[qcFeatures,]   
+                  htseqQC <- htseqQC[qcFeatures,]   
               }
               geneTable <- fData(object)
               meta <- pData(object)
@@ -1287,27 +1407,133 @@ setMethod("performQC", signature(object="SCD"),
               pData(object) <- meta
               filterQC(object) <- TRUE
               cat("Done.\n")
-              cat("Estimating size factors ... ")
-              counts <- counts(object)
-              spikes <- spikes(object)
-              sf.data <- estSizeFact2(counts)
-              data <- t(t(counts) / sf.data)
-              sf.data.ercc <- estSizeFact2(spikes)
-              cat("Done.\n")
-              cat("Applying size factors ... ")
-              data.ercc <- t(t(spikes) / sf.data.ercc)
-              cat("Done.\n")
-              varGenes <- vector("list", 6)
-              names(varGenes)<- c("normalisedData", "sizeFactors", "highVarGenes",
-                                  "adjusted.p", "points", "parameters")
-              varGenes[["normalisedData"]] <- list(n.data.ercc = data.ercc)
-              varGenes[["sizeFactors"]] <- list(sf.data = sf.data, sf.data.ercc = sf.data.ercc)
-              object@technicalNoise <- varGenes
-              data <- cbind(data, object@counts[,failedQC])
-              data <- data[,colnames(object@counts)]
-              filterQC(object) <- FALSE
-              exprs(object) <- log10(1 + data)
-              filterQC(object) <- TRUE
+              ## cat("Estimating size factors ... ")
+              ## counts <- counts(object)
+              ## spikes <- spikes(object)
+              ## sf.data <- estSizeFact2(counts)
+              ## data <- t(t(counts) / sf.data)
+              ## sf.data.ercc <- estSizeFact2(spikes)
+              ## cat("Done.\n")
+              ## cat("Applying size factors ... ")
+              ## data.ercc <- t(t(spikes) / sf.data.ercc)
+              ## cat("Done.\n")
+              ## varGenes <- vector("list", 6)
+              ## names(varGenes)<- c("normalisedData", "sizeFactors", "highVarGenes",
+              ##                     "adjusted.p", "points", "parameters")
+              ## varGenes[["normalisedData"]] <- list(n.data.ercc = data.ercc)
+              ## varGenes[["sizeFactors"]] <- list(sf.data = sf.data, sf.data.ercc = sf.data.ercc)
+              ## object@technicalNoise <- varGenes
+              ## ## data <- cbind(data, assayDataElement(object, "counts")[,failedQC])
+              ## data <- cbind(data, matrix(NA, nrow = nrow(data), ncol = length(failedQC),
+              ##                            dimnames = list(rownames(data), failedQC)))
+              ## data <- data[,colnames(assayDataElement(object, "counts"))]
+              ## filterQC(object) <- FALSE
+              ## exprs(object) <- log10(1 + data)
+              ## filterQC(object) <- TRUE
               object <- restoreFilters(object, origFilter)
               object
           })
+
+
+##' Normalise counts data
+##'
+##' Normalise counts data
+##' @title Normalise counts data
+##' @param object SCD
+##' @param normMethod DESeq or scran 
+##' @param logFnc log10
+##' @param pseudocount Default 1. Added to normalised counts before log transformation
+##' @param ... Additional parameters
+##' @return SCD object
+##' @author Wajid Jawaid
+##' @importFrom scran computeSumFactors
+setMethod("normalize", signature(object="SCD"),
+          function(object, normMethod = c("DESeq", "scran"), logFnc = log10,
+                   pseudocount = 1, ...) {
+              origFilter <- saveFilters(object)
+              object <- deactivateFilters(object, includeQC = FALSE)
+              object@normalise <- normMethod
+              if (normMethod == "DESeq") {
+                  cat("Estimating DESeq size factors ... ")
+                  counts <- counts(object)
+                  spikes <- spikes(object)
+                  sf.data <- estSizeFact2(counts)
+                  data <- t(t(counts) / sf.data)
+                  sf.data.ercc <- estSizeFact2(spikes)
+                  cat("Done.\n")
+                  cat("Applying size factors ... ")
+                  data.ercc <- t(t(spikes) / sf.data.ercc)
+                  cat("Done.\n")
+                  varGenes <- vector("list", 6)
+                  names(varGenes)<- c("normalisedData", "sizeFactors", "highVarGenes",
+                                      "adjusted.p", "points", "parameters")
+                  varGenes[["normalisedData"]] <- list(n.data.ercc = data.ercc)
+                  varGenes[["sizeFactors"]] <- list(sf.data = sf.data, sf.data.ercc = sf.data.ercc)
+                  failedQC <- pData(phenoData(object))[,"failedQC", drop = FALSE]
+                  failedQC <- rownames(failedQC)[failedQC[,"failedQC"]]
+                  data <- cbind(data, matrix(NA, nrow = nrow(data), ncol = length(failedQC),
+                                             dimnames = list(rownames(data), failedQC)))
+                  data <- data[,colnames(assayDataElement(object, "counts"))]
+                  filterQC(object) <- FALSE
+                  exprs(object) <- logFnc(pseudocount + data)
+              } else if (normMethod == "scran") {
+                  cat("Estimating scran size factors ... ")
+                  object <- computeSumFactors(object, ...)
+                  sf <- sizeFactors(object)
+                  if (any(is.na(sf))) {
+                      failScran <- names(sf)[is.na(sf)]
+                      object <- excludeCells(object, cellNames = failScran, reset = FALSE)
+                  }
+                  cat("done.\nApplying scran size factors ... ")                  
+                  exprs(object) <- logFnc(t(t(counts(object) / sizeFactors(object))) + pseudocount)
+                  varGenes <- vector("list", 6)
+                  names(varGenes)<- c("normalisedData", "sizeFactors", "highVarGenes",
+                                      "adjusted.p", "points", "parameters")
+                  varGenes$sizeFactors$sf.data <- sizeFactors(object)
+              }
+              object@technicalNoise <- varGenes
+              object <- restoreFilters(object, origFilter)
+              object
+          })
+
+setMethod("coerce", signature(from="SCD", to="SCESet"), function(from, to) {
+    new("SCESet", countData = assayDataElement(from, "counts"),
+        cellPairwiseDistances = from@cellPairwiseDistances,
+        featurePairwiseDistances = from@featurePairwiseDistances,
+        phenoData = phenoData(from),
+        featureData = featureData(from))
+})
+
+##' Set size factors
+##'
+##' Set size factors
+##' @title Set size factors
+##' @param object SCD Single Cell Dataset
+##' @param type optional character argument providing the type or name of the
+#' size factors to be accessed or assigned.
+##' @param ... Additional parameters
+##' @param value A vector to be stored
+##' @return SCD object
+##' @author Wajid Jawaid
+setReplaceMethod("sizeFactors", signature(object = "SCD", value = "numeric"),
+                 function(object, type = NULL, ..., value) {
+                     ofield <- .construct_sf_field(object, type)
+                     newCol <- data.frame(value,
+                                          row.names = rownames(pData(object)))
+                     colnames(newCol) <- ofield
+                     addPheno(object, newCol)
+                 })
+
+.construct_sf_field <- function (object, type) {
+    ofield <- "size_factor"
+    if (!is.null(type)) {
+        fc_available <- object@featureControlInfo$name
+        if (length(fc_available) == 0L) {
+            stop("no named controls specified in the SCESet object")
+        }
+        type <- match.arg(type, fc_available)
+        ofield <- paste0(ofield, "_", type)
+    }
+    return(ofield)
+}
+

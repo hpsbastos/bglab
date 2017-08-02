@@ -5,7 +5,7 @@
 \alias{initialize,SCD-method}
 \title{To initialize a SCD object}
 \usage{
-\S4method{initialize}{SCD}(.Object, experimentType, assayData, genoData,
+\S4method{initialize}{SCD}(.Object, experimentType, assayData, featureData,
   phenoData, spike = NULL, qc = NULL, ...)
 }
 \arguments{
@@ -15,7 +15,7 @@
 
 \item{assayData}{Annotated matrix of gene expression data}
 
-\item{genoData}{Annotated data frame of gene information. One column must match rownames
+\item{featureData}{Annotated data frame of gene information. One column must match rownames
 in \code{assayData} the gene expression annotated matrix.}
 
 \item{phenoData}{Annotated data frame of phenotype information. One column must match the colnames in \code{assayData} the gene expression annotated matrix.}

@@ -33,6 +33,8 @@ are required to generate a new object. Both qPCR and RNAseq data may be used.
 
 \item{\code{filterQC}}{Default TRUE. Will not return cells that failed QC when set to TRUE.}
 
+\item{\code{normalise}}{Either "DESeq" or "scran".}
+
 \item{\code{qcOutput}}{List containing QC output.}
 
 \item{\code{technicalNoise}}{List containing technical noise output.

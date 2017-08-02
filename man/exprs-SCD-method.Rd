@@ -11,7 +11,7 @@
 \item{object}{SCD}
 }
 \value{
-etrix of expression values
+matrix of expression values
 }
 \description{
 Retrieve gene expression data from Single Cell Dataset object
