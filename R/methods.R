@@ -516,6 +516,7 @@ setMethod("initialize", "SCESet",
       .Object@protocolData <- AnnotatedDataFrame(
           data.frame(labelDescription = rownames(phenoData),
                      row.names = rownames(phenoData)))
+      .Object@useForExprs <- "exprs"
       .Object
       ## callNextMethod(.Object, assayData = assayData, annotation=experimentType,
       ##                featureData=featureData, phenoData=phenoData, ...)
