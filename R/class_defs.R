@@ -174,7 +174,7 @@ setClass("Isomap", representation = representation(
 ##' Highly recommended.
 ##' @export
 setClass("SCD",
-         contains = "SCESet", 
+         contains = "SCESet",
          representation = representation(
              useFilter = "logical",
              filterGene = "logical",

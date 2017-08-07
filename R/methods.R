@@ -462,10 +462,11 @@ setMethod("initialize", "SCESet",
           }
           if (have.data == "countData") {
               exprsData <-
-                  scater:::.compute_exprs(countData, size_factors = colSums(countData), 
-                                          log = TRUE, sum = FALSE,
-                                          logExprsOffset = logExprsOffset)
-              dimnames(exprsData) <- dimnames(countData)
+                  ## scater:::.compute_exprs(countData, size_factors = colSums(countData), 
+                  ##                         log = TRUE, sum = FALSE,
+                  ##                         logExprsOffset = logExprsOffset)
+                  countData
+              ## dimnames(exprsData) <- dimnames(countData)
           }
           else if (have.data != "exprsData") {
               exprsData <- log2(get(have.data) + logExprsOffset)
