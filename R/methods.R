@@ -149,7 +149,7 @@ setMethod("plot3", "reducedDim", function(object, colorBy = "", plotCols = NULL,
     }
     ev <- ev[,useDims]
     if (!is.numeric(colorBy)) {
-        colorBy <- as.factor(colorBy)
+        colorBy <- as.factor(as.character(colorBy))
         nCols <- length(levels(colorBy))        
         if (!is.null(plotCols)) {
             if (length(plotCols) != nCols) stop("Incorrect number of colours supplied.")
@@ -415,7 +415,7 @@ setMethod("initialize", "SCESet",
            is_exprsData = NULL, cellPairwiseDistances = dist(vector()), 
            featurePairwiseDistances = dist(vector()),
            lowerDetectionLimit = NULL, logExprsOffset = NULL, assayData = NULL,
-           ...) {
+           useForExprs = "exprs", ...) {
       if (is.null(assayData)) {
           have.data <- NULL
           for (dataname in c("countData", "tpmData", "cpmData", "fpkmData", 
@@ -516,7 +516,8 @@ setMethod("initialize", "SCESet",
       .Object@protocolData <- AnnotatedDataFrame(
           data.frame(labelDescription = rownames(phenoData),
                      row.names = rownames(phenoData)))
-      .Object@useForExprs <- "exprs"
+      if (exists("useForExprs", getClass("SCD")@slots))
+          .Object@useForExprs <- useForExprs
       .Object
       ## callNextMethod(.Object, assayData = assayData, annotation=experimentType,
       ##                featureData=featureData, phenoData=phenoData, ...)
@@ -532,10 +533,20 @@ setMethod("initialize", "SCESet",
 ##' @export
 setMethod("exprs", "SCD", function(object) {
     fD <- pData(featureData(object))
-    if (filterGene(object)) {
-        x <- assayDataElement(object, "exprs")[fD[,"included"],]
-    } else x <- assayDataElement(object, "exprs")
-    x <- subsetData(x, pData(phenoData(object)), saveFilters(object))
+    if (filterGene(object) && useFilter(object)) {
+        genes <- rownames(fD)[fD[,"included"]]
+    } else {
+        genes <- rownames(fD)
+    }
+    dmn <- capture.output(
+        cells <- subsetData(ncol(object), pData(phenoData(object)), saveFilters(object))
+    )
+    x <- assayDataElement(object, "exprs")[genes, cells]
+    ## fD <- pData(featureData(object))
+    ## if (filterGene(object)) {
+    ##     x <- assayDataElement(object, "exprs")[fD[,"included"],]
+    ## } else x <- assayDataElement(object, "exprs")
+    ## x <- x[,subsetData(ncol(x), pData(phenoData(object)), saveFilters(object))]
 })
 
 ##' Retrieve size factors
@@ -557,7 +568,7 @@ setMethod("sf", "SCD", function(object, type="bio"){
         
     } else stop("Incorrect type argument.")
     x <- matrix(x, nrow=1, dimnames=list(NULL, names(x)))
-    x <- subsetData(x, pData(phenoData(object)), saveFilters(object))
+    x <- x[,subsetData(ncol(x), pData(phenoData(object)), saveFilters(object))]
     return(x)
 })
 
@@ -571,10 +582,16 @@ setMethod("sf", "SCD", function(object, type="bio"){
 ##' @author Wajid Jawaid
 ##' @export
 setMethod("counts", "SCD", function(object, ...) {
-    x <- assayDataElement(object, "counts")
     fD <- pData(featureData(object))
-    if (filterGene(object) && useFilter(object)) x <- x[rownames(fD)[fD[,"included"]],]
-    x <- subsetData(x, pData(phenoData(object)), saveFilters(object))
+    if (filterGene(object) && useFilter(object)) {
+        genes <- rownames(fD)[fD[,"included"]]
+    } else {
+        genes <- rownames(fD)
+    }
+    dmn <- capture.output(
+        cells <- subsetData(ncol(object), pData(phenoData(object)), saveFilters(object))
+    )
+    x <- assayDataElement(object, "counts")[genes, cells]
 })
 
 ##' Retrieve spike in counts
@@ -586,7 +603,7 @@ setMethod("counts", "SCD", function(object, ...) {
 ##' @author Wajid Jawaid
 setMethod("spikes", "SCD", function(object) {
     x <- object@spike
-    x <- subsetData(x, pData(phenoData(object)), saveFilters(object))
+    x <- x[,subsetData(ncol(x), pData(phenoData(object)), saveFilters(object))]
 
     ## cellsInData <- attr(eD, "cellsInData")
     ## pD <-rownames(pData(object))
@@ -605,7 +622,7 @@ setMethod("spikes", "SCD", function(object) {
 ##' @author Wajid Jawaid
 setMethod("qc", "SCD", function(object) {
     x <- object@qcCounts
-    x <- subsetData(x, pData(phenoData(object)), saveFilters(object))
+    x <- x[,subsetData(ncol(x), pData(phenoData(object)), saveFilters(object))]
 })
 
 ##' Dimensions of SCD
@@ -1452,6 +1469,7 @@ setMethod("performQC", signature(object="SCD"),
 setMethod("normalize", signature(object="SCD"),
           function(object, normMethod = c("DESeq", "scran"), logFnc = log10,
                    pseudocount = 1, ...) {
+              normMethod <- match.arg(normMethod)
               origFilter <- saveFilters(object)
               object <- deactivateFilters(object, includeQC = FALSE)
               object@normalise <- normMethod
@@ -1461,37 +1479,49 @@ setMethod("normalize", signature(object="SCD"),
                   spikes <- spikes(object)
                   sf.data <- estSizeFact2(counts)
                   data <- t(t(counts) / sf.data)
-                  sf.data.ercc <- estSizeFact2(spikes)
+                  sf.spike <- estSizeFact2(spikes)
                   cat("Done.\n")
                   cat("Applying size factors ... ")
-                  data.ercc <- t(t(spikes) / sf.data.ercc)
-                  cat("Done.\n")
+                  data.ercc <- t(t(spikes) / sf.spike)
+                  cat("Done.\nSaving changes ... ")
                   varGenes <- vector("list", 6)
                   names(varGenes)<- c("normalisedData", "sizeFactors", "highVarGenes",
                                       "adjusted.p", "points", "parameters")
                   varGenes[["normalisedData"]] <- list(n.data.ercc = data.ercc)
-                  varGenes[["sizeFactors"]] <- list(sf.data = sf.data, sf.data.ercc = sf.data.ercc)
-                  failedQC <- pData(phenoData(object))[,"failedQC", drop = FALSE]
-                  failedQC <- rownames(failedQC)[failedQC[,"failedQC"]]
+                  varGenes[["sizeFactors"]] <- list(sf.data = sf.data, sf.data.ercc = sf.spike)
+                  passedQC <- pData(phenoData(object))[,"passedQC", drop = FALSE]
+                  failedQC <- rownames(passedQC)[!passedQC[,"passedQC"]]
                   data <- cbind(data, matrix(NA, nrow = nrow(data), ncol = length(failedQC),
                                              dimnames = list(rownames(data), failedQC)))
                   data <- data[,colnames(assayDataElement(object, "counts"))]
                   filterQC(object) <- FALSE
-                  exprs(object) <- logFnc(pseudocount + data)
+                  dmn <- capture.output(exprs(object) <- logFnc(pseudocount + data))
+                  cat("Done.\n")
               } else if (normMethod == "scran") {
                   cat("Estimating scran size factors ... ")
-                  object <- computeSumFactors(object, ...)
-                  sf <- sizeFactors(object)
-                  if (any(is.na(sf))) {
-                      failScran <- names(sf)[is.na(sf)]
+                  sf <- computeSumFactors(counts(object), ...)
+                  names(sf) <- colnames(counts(object))
+                  if (any(sf <= 0)) {
+                      failScran <- names(sf)[sf <= 0]
                       object <- excludeCells(object, cellNames = failScran, reset = FALSE)
                   }
-                  cat("done.\nApplying scran size factors ... ")                  
-                  exprs(object) <- logFnc(t(t(counts(object) / sizeFactors(object))) + pseudocount)
+                  sf.spike <- colSums(spikes(object))
+                  if (any(sf.spike < 1e-8))
+                      warning("Zero spike-in counts.")
+                  cat("done.\nApplying scran size factors ... ")
+                  x <- logFnc(t(t(counts(object) / sf)) + pseudocount)
+                  missCells <- setdiff(colnames(object), colnames(x))
+                  missCells <- matrix(NA, nrow = nrow(x), ncol = length(missCells),
+                                      dimnames = list(rownames(x), missCells))
+                  x <- cbind(x, missCells)
+                  filterQC(object) <- FALSE
+                  dmn <- capture.output(exprs(object) <- x[,colnames(object)])
+                  sf.spike <- sf.spike / mean(sf.spike)
                   varGenes <- vector("list", 6)
                   names(varGenes)<- c("normalisedData", "sizeFactors", "highVarGenes",
                                       "adjusted.p", "points", "parameters")
-                  varGenes$sizeFactors$sf.data <- sizeFactors(object)
+                  varGenes[["sizeFactors"]]<- list(sf.data = sf, sf.data.ercc = sf.spike)
+                  cat("done.\n")
               }
               object@technicalNoise <- varGenes
               object <- restoreFilters(object, origFilter)

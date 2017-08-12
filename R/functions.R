@@ -59,36 +59,36 @@ newSCD <- function(experimentType, assayData = NULL, featureData, phenoData,
         featurePairwiseDistances = featurePairwiseDistances, ...)
 }
 
-subsetData <- function(x, pD, filters) {
-    cellsInData <- attr(x, "cellsInData")
+subsetData <- function(ncx, pD, filters) {
+    ## cellsInData <- attr(x, "cellsInData")
     filterCell <- filters[[1]] && filters[[3]]
     filterQC <- filters[[4]]
     nrp <- nrow(pD)
-    ncx <- ncol(x)
+    ## ncx <- ncol(x)
     if (nrp == ncx) {
         if (filterCell && filterQC){
-            x <- x[,(pD[,"included"] & pD[,"passedQC"])]
+            x <- pD[,"included"] & pD[,"passedQC"]
         } else if (!filterCell && filterQC) {
-            x <- x[,pD[,"passedQC"]]
+            x <- pD[,"passedQC"]
         } else if (filterCell && !filterQC) {
-            x <- x[,pD[,"included"]]
+            x <- pD[,"included"]
         }
     } else {
         filterInc <- rownames(pD)[pD[,"included"]]
         filterPass <- rownames(pD)[pD[,"passedQC"]]
         filterBoth <- intersect(filterInc, filterPass)
-        if (length(filter) != ncol(x)) {
+        if (length(filter) != ncx) {
             if (filterCell && filterQC){
-                x <- x[,filterBoth]
+                x <- filterBoth
             } else if (!filterCell && filterQC) {
-                x <- x[,filterPass]
+                x <- filterPass
             } else if (filterCell && !filterQC) {
-                x <- x[,filterInc]
+                x <- filterInc
             } else 
                 stop("Internal error in subsetData().")   
         }
     }
-    attr(x, "cellsInData") <- cellsInData
+    ## attr(x, "cellsInData") <- cellsInData
     return(x)
 }
 
@@ -294,6 +294,7 @@ plotGene <- function(scd, gene, useDims=1:2, reduceMethod = c("pca","diffMap","t
                      multigene = FALSE, useMeta = FALSE, bgCol = "black",
                      leg.text.col = "white", leg.inset = 0, plt.mar = rep(0,4),
                      channelOrder = 1:3, ...) {
+    reduceMethod <- match.arg(reduceMethod)
     mg <- length(gene) > 1
     redDim <- eigenvecs(slot(scd, reduceMethod))
     if (mg) ng <- length(gene)
