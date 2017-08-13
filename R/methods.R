@@ -603,14 +603,14 @@ setMethod("counts", "SCD", function(object, ...) {
 ##' @author Wajid Jawaid
 setMethod("spikes", "SCD", function(object) {
     x <- object@spike
+    cellsInData <- attr(x, "cellsInData")
     x <- x[,subsetData(ncol(x), pData(phenoData(object)), saveFilters(object))]
-
-    ## cellsInData <- attr(eD, "cellsInData")
+    attr(x, "cellsInData") <- cellsInData
+    x
     ## pD <-rownames(pData(object))
     ## if (filterQC(object)) eD <- eD[, pD]
     ## if (!useFilter(object)) return(eD)
     ## eD <- eD[, pD]
-    ## attr(eD, "cellsInData") <- cellsInData
 })
 
 ##' Retrieve QC in counts
@@ -622,7 +622,10 @@ setMethod("spikes", "SCD", function(object) {
 ##' @author Wajid Jawaid
 setMethod("qc", "SCD", function(object) {
     x <- object@qcCounts
+    cellsInData <- attr(x, "cellsInData")
     x <- x[,subsetData(ncol(x), pData(phenoData(object)), saveFilters(object))]
+    attr(x, "cellsInData") <- cellsInData
+    x
 })
 
 ##' Dimensions of SCD

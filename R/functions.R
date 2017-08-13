@@ -72,6 +72,8 @@ subsetData <- function(ncx, pD, filters) {
             x <- pD[,"passedQC"]
         } else if (filterCell && !filterQC) {
             x <- pD[,"included"]
+        } else {
+            x <- rep(TRUE, nrp)
         }
     } else {
         filterInc <- rownames(pD)[pD[,"included"]]
