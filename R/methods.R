@@ -603,6 +603,7 @@ setMethod("counts", "SCD", function(object, ...) {
 ##' @author Wajid Jawaid
 setMethod("spikes", "SCD", function(object) {
     x <- object@spike
+    if (all(dim(x) == c(0,0))) return(x)
     cellsInData <- attr(x, "cellsInData")
     x <- x[,subsetData(ncol(x), pData(phenoData(object)), saveFilters(object))]
     attr(x, "cellsInData") <- cellsInData
@@ -1482,7 +1483,9 @@ setMethod("normalize", signature(object="SCD"),
                   spikes <- spikes(object)
                   sf.data <- estSizeFact2(counts)
                   data <- t(t(counts) / sf.data)
-                  sf.spike <- estSizeFact2(spikes)
+                  if (all(dim(spikes(scd)) != 0)) {
+                      sf.spike <- estSizeFact2(spikes)
+                  } else sf.spike <- rep(NA, ncol(data))
                   cat("Done.\n")
                   cat("Applying size factors ... ")
                   data.ercc <- t(t(spikes) / sf.spike)
@@ -1508,9 +1511,11 @@ setMethod("normalize", signature(object="SCD"),
                       failScran <- names(sf)[sf <= 0]
                       object <- excludeCells(object, cellNames = failScran, reset = FALSE)
                   }
-                  sf.spike <- colSums(spikes(object))
-                  if (any(sf.spike < 1e-8))
-                      warning("Zero spike-in counts.")
+                  if (all(dim(spikes(scd)) != 0)) {
+                      sf.spike <- colSums(spikes(object))
+                      if (any(sf.spike < 1e-8))
+                          warning("Zero spike-in counts.")
+                  } else sf.spike <- rep(NA, length(sf))
                   cat("done.\nApplying scran size factors ... ")
                   x <- logFnc(t(t(counts(object) / sf)) + pseudocount)
                   missCells <- setdiff(colnames(object), colnames(x))
