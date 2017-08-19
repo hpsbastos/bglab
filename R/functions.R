@@ -1654,7 +1654,7 @@ clustLouvain <- function(scd, pcaDims = 50, nsig = 20, d2 = NULL, sim = NULL, pl
         mkv <- sim
     }
     cat("Done.\nMake sparse ... ")
-    mkv <- sparseMarkov(mkv)
+    mkv <- sparseMarkov(mkv, knn = nsig)
     mkv <- (mkv + t(mkv)) / 2
     ## sum(apply(mkv, 1, sd) == 0)
     ## sum(apply(mkv, 2, sd) == 0)
