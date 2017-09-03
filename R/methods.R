@@ -1505,7 +1505,7 @@ setMethod("normalize", signature(object="SCD"),
                   cat("Done.\n")
               } else if (normMethod == "scran") {
                   cat("Quick cluster ... ")
-                  clusters <- quickCluster(object)
+                  clusters <- quickCluster(counts(object))
                   cat("done.\nEstimating scran size factors ... ")
                   sf <- computeSumFactors(counts(object), cluster = clusters, ...)
                   names(sf) <- colnames(counts(object))
