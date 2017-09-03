@@ -1469,7 +1469,7 @@ setMethod("performQC", signature(object="SCD"),
 ##' @param ... Additional parameters
 ##' @return SCD object
 ##' @author Wajid Jawaid
-##' @importFrom scran computeSumFactors
+##' @importFrom scran computeSumFactors quickCluster
 setMethod("normalize", signature(object="SCD"),
           function(object, normMethod = c("DESeq", "scran"), logFnc = log10,
                    pseudocount = 1, ...) {
@@ -1483,7 +1483,7 @@ setMethod("normalize", signature(object="SCD"),
                   spikes <- spikes(object)
                   sf.data <- estSizeFact2(counts)
                   data <- t(t(counts) / sf.data)
-                  if (all(dim(spikes(scd)) != 0)) {
+                  if (all(dim(spikes(object)) != 0)) {
                       sf.spike <- estSizeFact2(spikes)
                   } else sf.spike <- rep(NA, ncol(data))
                   cat("Done.\n")
@@ -1504,14 +1504,17 @@ setMethod("normalize", signature(object="SCD"),
                   dmn <- capture.output(exprs(object) <- logFnc(pseudocount + data))
                   cat("Done.\n")
               } else if (normMethod == "scran") {
-                  cat("Estimating scran size factors ... ")
-                  sf <- computeSumFactors(counts(object), ...)
+                  cat("Quick cluster ... ")
+                  clusters <- quickCluster(object)
+                  cat("done.\nEstimating scran size factors ... ")
+                  sf <- computeSumFactors(counts(object), cluster = clusters, ...)
                   names(sf) <- colnames(counts(object))
                   if (any(sf <= 0)) {
                       failScran <- names(sf)[sf <= 0]
                       object <- excludeCells(object, cellNames = failScran, reset = FALSE)
                   }
-                  if (all(dim(spikes(scd)) != 0)) {
+                  attr(sf, "cluster") <- clusters
+                  if (all(dim(spikes(object)) != 0)) {
                       sf.spike <- colSums(spikes(object))
                       if (any(sf.spike < 1e-8))
                           warning("Zero spike-in counts.")
