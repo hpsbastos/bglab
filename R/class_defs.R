@@ -171,6 +171,7 @@ setClass("Isomap", representation = representation(
 ##' @slot normalise Either "DESeq" or "scran".
 ##' @slot qcOutput List containing QC output.
 ##' @slot technicalNoise List containing technical noise output.
+##' @slot useForExprs Deprecated - only in for compatibility with scater.
 ##' Highly recommended.
 ##' @export
 setClass("SCD",
@@ -190,7 +191,8 @@ setClass("SCD",
              filterQC="logical",
              normalise="character",
              qcOutput="list",
-             technicalNoise="list"
+             technicalNoise="list",
+             useForExprs="character"
              ),
          prototype = prototype(
              SCESet = new("SCESet", cellPairwiseDistances = dist(vector()),
@@ -209,7 +211,8 @@ setClass("SCD",
              filterQC = TRUE,
              normalise=character(),
              qcOutput = list(),
-             technicalNoise = list()
+             technicalNoise = list(),
+             useForExprs="exprs"
              ),
          validity = function(object) {
              isValid <- TRUE

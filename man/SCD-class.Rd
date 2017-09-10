@@ -37,7 +37,9 @@ are required to generate a new object. Both qPCR and RNAseq data may be used.
 
 \item{\code{qcOutput}}{List containing QC output.}
 
-\item{\code{technicalNoise}}{List containing technical noise output.
+\item{\code{technicalNoise}}{List containing technical noise output.}
+
+\item{\code{useForExprs}}{Deprecated - only in for compatibility with scater.
 Highly recommended.}
 }}
 
