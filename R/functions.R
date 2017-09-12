@@ -488,25 +488,25 @@ findGene <- function(scd, g, includeHidden=TRUE) {
     gTab[agrep(g, gTab[,2], ignore.case = TRUE),2]
 }
 
-##' Fast vectorised Euclidean distance calculator
-##'
-##' Calculates Euclidean distances between vectors arranged as columns in a matrix.
-##' @title Fast vectorised Euclidean distance calculator
-##' @return Returns a matrix of pairwise distances
-##' @author Wajid Jawaid
-##' @param x Matrix with vectors in columns.
-##' @param squared Will not perform the square root, i.e. will return the squared `L2-norm'.
-##' @export
-fastDist <- function(x, squared = FALSE) {
-    a <- colSums(x^2)
-    a <- a * matrix(1, ncol(x), ncol(x))
-    a <- a + t(a)
-    ab <- t(x) %*% x
-    d <- a - 2 * ab
-    diag(d) <- 0
-    if (!squared) d <- sqrt(d)
-    return(d)
-}
+## ##' Fast vectorised Euclidean distance calculator
+## ##'
+## ##' Calculates Euclidean distances between vectors arranged as columns in a matrix.
+## ##' @title Fast vectorised Euclidean distance calculator
+## ##' @return Returns a matrix of pairwise distances
+## ##' @author Wajid Jawaid
+## ##' @param x Matrix with vectors in columns.
+## ##' @param squared Will not perform the square root, i.e. will return the squared `L2-norm'.
+## ##' @export
+## fastDist <- function(x, squared = FALSE) {
+##     a <- colSums(x^2)
+##     a <- a * matrix(1, ncol(x), ncol(x))
+##     a <- a + t(a)
+##     ab <- t(x) %*% x
+##     d <- a - 2 * ab
+##     diag(d) <- 0
+##     if (!squared) d <- sqrt(d)
+##     return(d)
+## }
 
 ##' Decorate plots with log10 values
 ##'
@@ -1575,30 +1575,30 @@ winsor <- function (x, fraction=0.05, lower = FALSE) {
 }
 
 
-##' Louvain clustering on transition matrix
-##'
-##' Louvain clustering on transition matrix
-##' @title Louvain clustering on transition matrix
-##' @param mkv Transition matrix
-##' @return Returns a list with graph, dataframe and community object
-##' @author Wajid Jawaid
-##' @export
-##' @importFrom igraph cluster_louvain communities
-findLouvain <- function(mkv) {
-    gph <- graph.adjacency(mkv, weighted = TRUE, mode = "undirected")
-    cll <- cluster_louvain(gph)
-    lvnClust <- communities(cll)
-    lvnClust <- lapply(1:length(lvnClust),
-                       function(x) cbind.data.frame(cell=lvnClust[[x]],
-                                                    class=as.character(x)))
-    lvnClust <- do.call(rbind, lvnClust)
-    rownames(lvnClust) <- lvnClust$cell
-    lvnClust
-    lvnClust[,1] <- NULL                # Remove duplicate name column
-    lvnClust <- lvnClust[rownames(mkv),,drop=FALSE]
-    return(list(gph=gph, clust=lvnClust, cll = cll))
-    ## lvnClust <- lvnClust[rownames(pData(scd)),,drop=FALSE]    
-}
+## ##' Louvain clustering on transition matrix
+## ##'
+## ##' Louvain clustering on transition matrix
+## ##' @title Louvain clustering on transition matrix
+## ##' @param mkv Transition matrix
+## ##' @return Returns a list with graph, dataframe and community object
+## ##' @author Wajid Jawaid
+## ##' @export
+## ##' @importFrom igraph cluster_louvain communities
+## findLouvain <- function(mkv) {
+##     gph <- graph.adjacency(mkv, weighted = TRUE, mode = "undirected")
+##     cll <- cluster_louvain(gph)
+##     lvnClust <- communities(cll)
+##     lvnClust <- lapply(1:length(lvnClust),
+##                        function(x) cbind.data.frame(cell=lvnClust[[x]],
+##                                                     class=as.character(x)))
+##     lvnClust <- do.call(rbind, lvnClust)
+##     rownames(lvnClust) <- lvnClust$cell
+##     lvnClust
+##     lvnClust[,1] <- NULL                # Remove duplicate name column
+##     lvnClust <- lvnClust[rownames(mkv),,drop=FALSE]
+##     return(list(gph=gph, clust=lvnClust, cll = cll))
+##     ## lvnClust <- lvnClust[rownames(pData(scd)),,drop=FALSE]    
+## }
 
 ##' Perform Louvain clustering
 ##'
@@ -1617,7 +1617,7 @@ findLouvain <- function(mkv) {
 ##' @importFrom igraph layout_with_fr
 ##' @importFrom stats dist
 ##' @importFrom roots applyGaussianKernelwithVariableSigma
-##' @importFrom roots diffuseMat sparseMarkov
+##' @importFrom roots diffuseMat sparseMarkov findLouvain
 ##' @export
 clustLouvain <- function(scd, pcaDims = 50, nsig = 20, d2 = NULL, sim = NULL, plotDims = 3,
                          layoutIter = 1000) {
