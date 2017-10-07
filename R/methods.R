@@ -1042,8 +1042,8 @@ setMethod("runTSNE", "SCD", function(object, ndims = 3, perplexity = 30, theta =
                        eigenvectors = tsne$Y,
                        theta = tsne$theta,
                        perplexity = tsne$perplexity,
-                       N = tsne$N,
-                       origD = tsne$origD,
+                       N = as.integer(tsne$N),
+                       origD = as.integer(tsne$origD),
                        seed = seed,
                        nnError = tsne$itercosts,
                        algorithm = "bh-tsne"
