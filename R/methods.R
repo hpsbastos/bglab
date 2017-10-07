@@ -1482,13 +1482,13 @@ setMethod("normalize", signature(object="SCD"),
                   counts <- counts(object)
                   spikes <- spikes(object)
                   sf.data <- estSizeFact2(counts)
+                  cat("Done.\n")
+                  cat("Applying size factors ... ")
                   data <- t(t(counts) / sf.data)
                   if (all(dim(spikes(object)) != 0)) {
                       sf.spike <- estSizeFact2(spikes)
+                      data.ercc <- t(t(spikes) / sf.spike)
                   } else sf.spike <- rep(NA, ncol(data))
-                  cat("Done.\n")
-                  cat("Applying size factors ... ")
-                  data.ercc <- t(t(spikes) / sf.spike)
                   cat("Done.\nSaving changes ... ")
                   varGenes <- vector("list", 6)
                   names(varGenes)<- c("normalisedData", "sizeFactors", "highVarGenes",
