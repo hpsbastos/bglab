@@ -6,7 +6,7 @@
 \usage{
 performQC(object, selectedCells = "ALL", cutoffs = c(2e+05, 0.2, 0.2, 0, 0,
   1, 0), metaLaneID = "flowCell", mitochondrialIdenitifier = "^mt|^MT",
-  pdf = NULL, qcFeatures = "ALL")
+  pdf = NULL, qcFeatures = "ALL", ...)
 }
 \arguments{
 \item{object}{SCD}
@@ -32,6 +32,8 @@ Set thresholds for:
 \item{pdf}{Prefix name of pdfs.}
 
 \item{qcFeatures}{Features from the QC to plot.}
+
+\item{...}{Additional parameters}
 }
 \value{
 SCD object

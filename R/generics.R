@@ -552,12 +552,13 @@ setGeneric("techVar", function(object, useERCC = TRUE, cvThresh=.3, quant=.8,
 ##' @param mitochondrialIdenitifier Regexp identifying mitochondrial gene in geneTable
 ##' @param pdf Prefix name of pdfs.
 ##' @param qcFeatures Features from the QC to plot.
+##' @param ... Additional parameters
 ##' @return SCD object
 ##' @author Wajid Jawaid
 ##' @export
 setGeneric("performQC", function(object, selectedCells = "ALL",
                    cutoffs = c(2e5, .2, .2, 0, 0, 1, 0),
                    metaLaneID = "flowCell", mitochondrialIdenitifier = "^mt|^MT",
-                   pdf = NULL, qcFeatures = "ALL") standardGeneric("performQC"))
+                   pdf = NULL, qcFeatures = "ALL", ...) standardGeneric("performQC"))
 
 

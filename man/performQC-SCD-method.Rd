@@ -7,7 +7,8 @@
 \usage{
 \S4method{performQC}{SCD}(object, selectedCells = "ALL", cutoffs = c(2e+05,
   0.2, 0.2, 0, 0, 1, 0), metaLaneID = "flowCell",
-  mitochondrialIdenitifier = "^mt|^MT", pdf = NULL, qcFeatures = "ALL")
+  mitochondrialIdenitifier = "^mt|^MT", pdf = NULL, qcFeatures = "ALL",
+  orientation = c("lanscape", "portrait"))
 }
 \arguments{
 \item{object}{SCD}
@@ -33,6 +34,8 @@ Set thresholds for:
 \item{pdf}{Prefix name of pdfs.}
 
 \item{qcFeatures}{Features from the QC to plot.}
+
+\item{orientation}{Default "landscape". Can also be "portrait".}
 }
 \value{
 SCD object

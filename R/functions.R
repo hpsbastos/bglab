@@ -1070,11 +1070,14 @@ expressedGene <- function(x) {
 ##'  \item{ercc:mapped (less than threshold) and}
 ##'  \item{nuclearGenes:mapped (greater than threshold).}
 ##' }
+##' @param orientation Default "landscape". Can also be "portrait".
 ##' @return List 
 ##' @author Wajid Jawaid
 qcFunc <- function(counts, ercc.data, htseqQC, geneTable, meta, metaLaneID = "flowCell",
                    mitochondrialIdenitifier = "^mt|^MT", pdf = NULL,
-                   cutoffs = c(2e5, .2, .2, 0, 0, 1, 0)) {
+                   cutoffs = c(2e5, .2, .2, 0, 0, 1, 0),
+                   orientation = c("landscape", "portrait")) {
+    orientation <- match.arg(orientation)
     mitochondrialGenesIDs <- geneTable[grep(mitochondrialIdenitifier,
                                             geneTable[,"Associated_Gene_Name"]),1]
     nuclearGeneIDs <- geneTable[-match(mitochondrialGenesIDs, geneTable[,1]),1]
@@ -1131,6 +1134,12 @@ qcFunc <- function(counts, ercc.data, htseqQC, geneTable, meta, metaLaneID = "fl
         nps <- length(qcPlots)
         npsRow <- floor(sqrt(nps))
         npsCol <- ceiling(nps / npsRow)
+        if (orientation == "portrait") {
+            temp <- npsRow
+            npsRow <- npsCol
+            npsCol <- temp
+            rm(temp)
+        }
         if(is.null(pdf)) {
             dev.new()
         } else {

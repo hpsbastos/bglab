@@ -6,7 +6,7 @@
 \usage{
 qcFunc(counts, ercc.data, htseqQC, geneTable, meta, metaLaneID = "flowCell",
   mitochondrialIdenitifier = "^mt|^MT", pdf = NULL, cutoffs = c(2e+05,
-  0.2, 0.2, 0, 0, 1, 0))
+  0.2, 0.2, 0, 0, 1, 0), orientation = c("landscape", "portrait"))
 }
 \arguments{
 \item{counts}{raw counts}
@@ -36,6 +36,8 @@ Set thresholds for:
  \item{ercc:mapped (less than threshold) and}
  \item{nuclearGenes:mapped (greater than threshold).}
 }}
+
+\item{orientation}{Default "landscape". Can also be "portrait".}
 }
 \value{
 List

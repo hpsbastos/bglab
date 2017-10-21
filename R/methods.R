@@ -1384,12 +1384,14 @@ setMethod("techVar", signature(object = "SCD"),
 ##' @param mitochondrialIdenitifier Regexp identifying mitochondrial gene in geneTable
 ##' @param pdf Prefix name of pdfs.
 ##' @param qcFeatures Features from the QC to plot.
+##' @param orientation Default "landscape". Can also be "portrait". 
 ##' @return SCD object
 ##' @author Wajid Jawaid
 setMethod("performQC", signature(object="SCD"),
           function(object, selectedCells = "ALL", cutoffs = c(2e5, .2, .2, 0, 0, 1, 0),
                    metaLaneID = "flowCell", mitochondrialIdenitifier = "^mt|^MT",
-                   pdf = NULL, qcFeatures = "ALL") {
+                   pdf = NULL, qcFeatures = "ALL",
+                   orientation = c("lanscape", "portrait")) {
               origFilter <- saveFilters(object)
               object <- deactivateFilters(object, includeQC = TRUE)
               counts <- counts(object)
@@ -1422,7 +1424,8 @@ setMethod("performQC", signature(object="SCD"),
               }
               cat("Performing QC ... ")
               qc <- qcFunc(counts, ercc.data, htseqQC, geneTable, meta,
-                           metaLaneID, mitochondrialIdenitifier, pdf, cutoffs)
+                           metaLaneID, mitochondrialIdenitifier, pdf, cutoffs,
+                           orientation)
               object@qcOutput <- qc
               failedQC <- do.call(c, qc[[1]])
               meta <- pData(object)
