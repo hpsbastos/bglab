@@ -1511,12 +1511,12 @@ setMethod("normalize", signature(object="SCD"),
                   clusters <- quickCluster(counts(object))
                   cat("done.\nEstimating scran size factors ... ")
                   sf <- computeSumFactors(counts(object), cluster = clusters, ...)
+                  names(sf) <- colnames(counts(object))
                   if (any(sf <= 0)) {
                       failScran <- names(sf)[sf <= 0]
                       object <- excludeCells(object, cellNames = failScran, reset = FALSE)
                   }
                   attr(sf, "cluster") <- clusters
-                  names(sf) <- colnames(counts(object))
                   if (all(dim(spikes(object)) != 0)) {
                       sf.spike <- colSums(spikes(object))
                       if (any(sf.spike < 1e-8))
