@@ -138,8 +138,8 @@ setGeneric("plotTree3", function(object, useDims, pointColor, ...) standardGener
 ##' @param ... Additional parameters to pass to plot
 ##' @return Plots 3D path
 ##' @author Wajid Jawaid
-setGeneric("plotPath3", function(object, diamWidth, diamCol, useDims, selectedPath, project2D,
-                                 ...) standardGeneric("plotPath3"))
+# setGeneric("plotPath3", function(object, diamWidth, diamCol, useDims, selectedPath, project2D,
+#                                  ...) standardGeneric("plotPath3"))
 
 ##' Retrieve size factors
 ##'
