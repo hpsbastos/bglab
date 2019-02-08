@@ -111,183 +111,183 @@ setMethod("getPaths", "reducedDim", function(object) object@paths)
 ##' @return 3D plot
 ##' @author Wajid Jawaid
 ##' @export
-setMethod("plot3", "reducedDim", function(object, colorBy = "", plotCols = NULL,
-                                          legendSize = 1,
-                                          legendOffset = 0.2, legPlac = 1:3, legPos = "front",
-                                          negLeg = FALSE, plotLegend = TRUE, legVert = 1,
-                                          legTextPos = 1, axLabs = "Component", doPath = FALSE,
-                                          doTree = FALSE, selectedPath = NULL, useDims = 1:3,
-                                          selectedCells = c(NA, NULL), legendTitle = "",
-                                          diamWidth = 2, diamCol = "black", returnID = FALSE,
-                                          na.col="Black", bringToFront = TRUE,
-                                          project2D = NULL,
-                                          opacity=NULL, size=5, pch=20, outline=NULL, ...) {
-    ev <- eigenvecs(object)
-    .useDims <- useDims
-    if (!is.null(project2D)) {
-        ev <- applyMVP(ev[,useDims], project2D)
-        useDims <- 1:2
-    }
-    if (any(is.na(match(useDims, 1:ncol(ev))))) {
-        stop("Selected plot dimensions and eigen vector matrix not consistent")
-    }
-    if (length(useDims) > 3) stop("Cannot plot more than 3 dimensions.")
-    pTitle <- attr(colorBy, "title")
-    if (length(colorBy) != nrow(ev)) {
-        cat("Length of ColorBy incorrect. Colour set to ggPlot colours\n")
-        plotCols <- NULL
-        # colorBy <- rep("", nrow(ev))
-    }
-    if (is.null(outline)) {
-        outline <- FALSE
-    } else {
-        outline.col <- outline
-        outline <- TRUE
-    }
-    if (outline) {
-        if (!any(pch==21:25)) pch=21    # Check that outline compatible pch is used.
-    }
-    ev <- ev[,useDims]
-    if (!is.numeric(colorBy)) {
-        colorBy <- as.factor(colorBy)
-        nCols <- length(levels(colorBy))        
-        if (!is.null(plotCols)) {
-            if (length(plotCols) != nCols) stop("Incorrect number of colours supplied.")
-        } else {
-            ## ggColors <- hcl(h = seq(15, 375 - 360/nCols, length.out = nCols) %% 360, c = 100,
-            ##                 l = 65)
-            ggColors <- ggCol(nCols, remix = FALSE)
-            plotCols <- ggColors
-        }
-        ## if (nCols ==1) plotCols <- "black"
-        pointColor <- plotCols[as.numeric(colorBy)]
-    } else {
-        if (is.null(plotCols)) plotCols <- c("grey", "red")
-        pointColor <- colorGradient(colorBy, plotCols[1], plotCols[2], na.col=na.col)
-        if (length(plotCols) > 2) cat("plotCols > 2. Only first two colours used")
-    }
-    if (outline)
-        if (length(outline.col) == 1) outline.col <- rep(outline.col, length(pointColor))
-    if (!is.null(opacity)) {
-        pointColor <- rgb(t(col2rgb(pointColor)), alpha=opacity, maxColorValue=255)
-        if (outline)
-            outline.col <- rgb(t(col2rgb(outline.col)), alpha=opacity, maxColorValue=255)
-    }
-    if (class(axLabs) == "expression") {
-        colnames(ev) <- paste(axLabs, "[", useDims, "]", sep="")
-    } else if (as.character(axLabs) != "") {
-        colnames(ev) <- paste(axLabs, useDims)
-    } else colnames(ev) <- rep("", ncol(ev))
-    axLabs <- colnames(ev)
-    axLabs <- gsub(" ", "_", axLabs)
-    if (is.na(selectedCells)) selectedCells <- 1:nrow(ev)
-    mlabel <- function(x) bquote(.(parse(text = x)))  # Function to allow symbols in labels
-    if (length(useDims) == 2) {
-        if (bringToFront) {
-            pC <- order(colorBy, decreasing=FALSE)
-            evO <- ev[pC,]
-            pointCol <- pointColor[pC]
-            if (outline) outline.col <- outline.col[pC]
-        }
-        if (plotLegend && is.numeric(colorBy)) {
-            layout(matrix(1:2, 2), heights = c(1,5))
-            legCol <- attr(pointColor, "leg")
-            origPar <- par(no.readonly = TRUE)
-            par(mar=c(.5,2,4,2), mgp=c(3,.22,0), las=1)
-            image(as.numeric(legCol[,1]), 1,
-                  matrix(seq_along(legCol[,1]),ncol=1), col=legCol[,2], axes=FALSE,
-                  xlab="", ylab="", main = pTitle, cex.axis=.5,
-                  sub = expression(paste(log[10], "transformed normalised counts")))
-            axis(1, cex.axis=.5, tck=-.1)
-            par(mar = c(4.1, 4.1, 1.1, 2.1), mgp = origPar$mgp)
-        }
-        if (!outline) {
-            cellPlot <- plot(evO[selectedCells,], col = pointCol, xlab = mlabel(axLabs[1]),
-                             ylab = mlabel(axLabs[2]), pch=pch, ...)
-        } else {
-            cellPlot <- plot(evO[selectedCells,], col = outline.col, xlab = mlabel(axLabs[1]),
-                             ylab = mlabel(axLabs[2]), pch=pch, bg = pointCol, ...)
-        }
-        if (plotLegend && !(is.numeric(colorBy))) {
-            if (legPos == "front") legPos <- "topright"
-            legend(legPos, pch = 16, legend = levels(colorBy), col = plotCols)
-        }
-    } else {
-        cellPlot <- plot3d(ev[selectedCells,], col = pointColor, xlab = axLabs[1],
-                           ylab = axLabs[2], size=size,
-                           zlab = axLabs[3], alpha = opacity/255, ...)
-        par3d(ignoreExtent = TRUE)
-        ## Legend plotting
-        legCoords <- apply(ev, 2, range)[,legPlac]
-        if (legPos == "front") legCoords[,2] <- rev(legCoords[,2])
-        legCoord <- legCoords[2,]
-        legMargSign <- 1
-        if (negLeg) {
-            legCoord[1] <- legCoords[1,1]
-            legMargSign <- -1
-        }
-        legMargin <- diff(legCoords[,1]) * legendOffset
-        legCoord[1] <- legCoord[1] + (legMargin * legMargSign)
-        if (legVert == -1) legCoord[3] <- legCoords[1,3]
-        if (exists("nCols")) {
-            if (nCols > 1) {
-                lineSpace = legVert * (diff(legCoords[,3]) * legendSize / (nCols - 1))
-            } else lineSpace = 1
-            legCoordTab <- data.frame(matrix(rep(legCoord, nCols), ncol = 3, byrow = TRUE),
-                                      stringsAsFactors = FALSE)
-            legCoordTab[,3] <- seq(legCoordTab[1,3], by = -lineSpace, length.out = nCols)
-            legCoordTab[,4] <- levels(colorBy)
-            legCoordTab[,5] <- plotCols
-            legCoordTab[,6] <- legCoordTab[,1] + (legMargin * legMargSign * legTextPos) / 4
-            writeLeg <- function(x) {
-                points3d(x=x[1], y=x[2], z=x[3], color=x[5], size = 5)
-                x[legPlac[1]] <- x[6]
-                text3d(x=x[1], y=x[2], z=x[3], texts=x[4], color="black", adj=0)
-            }
-            if (plotLegend) {
-                ordLeg <- order(legPlac)
-                legTitle <- legCoordTab[1,]
-                legTitle[,3] <- legTitle[,3] + lineSpace
-                apply(legCoordTab[,c(ordLeg,4:6)], 1, writeLeg)
-                text3d(legTitle[ordLeg], texts=legendTitle, adj=0)
-            }
-        }
-        ## Legend plotting end
-    }
-    if(!doTree & !doPath & length(useDims) == 3) invisible(cellPlot)
-    if (doTree) plotTree3(object, useDims = .useDims, pointColor = pointColor,
-                          project2D = project2D)
-    if (doPath) {
-        if (is.null(selectedPath)) selectedPath <- "DiameterPath"
-        for (i in 1:length(selectedPath)) {
-            plotPath3(object, diamWidth = diamWidth, diamCol = diamCol[i], useDims = .useDims,
-                      selectedPath = selectedPath[i], project2D = project2D)
-        }
-    }
-    cellPlot <- list(cellPlot, legend = levels(colorBy), col = plotCols)
-    invisible(cellPlot)
-})
+# setMethod("plot3", "reducedDim", function(object, colorBy = "", plotCols = NULL,
+#                                           legendSize = 1,
+#                                           legendOffset = 0.2, legPlac = 1:3, legPos = "front",
+#                                           negLeg = FALSE, plotLegend = TRUE, legVert = 1,
+#                                           legTextPos = 1, axLabs = "Component", doPath = FALSE,
+#                                           doTree = FALSE, selectedPath = NULL, useDims = 1:3,
+#                                           selectedCells = c(NA, NULL), legendTitle = "",
+#                                           diamWidth = 2, diamCol = "black", returnID = FALSE,
+#                                           na.col="Black", bringToFront = TRUE,
+#                                           project2D = NULL,
+#                                           opacity=NULL, size=5, pch=20, outline=NULL, ...) {
+#     ev <- eigenvecs(object)
+#     .useDims <- useDims
+#     if (!is.null(project2D)) {
+#         ev <- applyMVP(ev[,useDims], project2D)
+#         useDims <- 1:2
+#     }
+#     if (any(is.na(match(useDims, 1:ncol(ev))))) {
+#         stop("Selected plot dimensions and eigen vector matrix not consistent")
+#     }
+#     if (length(useDims) > 3) stop("Cannot plot more than 3 dimensions.")
+#     pTitle <- attr(colorBy, "title")
+#     if (length(colorBy) != nrow(ev)) {
+#         cat("Length of ColorBy incorrect. Colour set to ggPlot colours\n")
+#         plotCols <- NULL
+#         # colorBy <- rep("", nrow(ev))
+#     }
+#     if (is.null(outline)) {
+#         outline <- FALSE
+#     } else {
+#         outline.col <- outline
+#         outline <- TRUE
+#     }
+#     if (outline) {
+#         if (!any(pch==21:25)) pch=21    # Check that outline compatible pch is used.
+#     }
+#     ev <- ev[,useDims]
+#     if (!is.numeric(colorBy)) {
+#         colorBy <- as.factor(colorBy)
+#         nCols <- length(levels(colorBy))        
+#         if (!is.null(plotCols)) {
+#             if (length(plotCols) != nCols) stop("Incorrect number of colours supplied.")
+#         } else {
+#             ## ggColors <- hcl(h = seq(15, 375 - 360/nCols, length.out = nCols) %% 360, c = 100,
+#             ##                 l = 65)
+#             ggColors <- ggCol(nCols, remix = FALSE)
+#             plotCols <- ggColors
+#         }
+#         ## if (nCols ==1) plotCols <- "black"
+#         pointColor <- plotCols[as.numeric(colorBy)]
+#     } else {
+#         if (is.null(plotCols)) plotCols <- c("grey", "red")
+#         pointColor <- colorGradient(colorBy, plotCols[1], plotCols[2], na.col=na.col)
+#         if (length(plotCols) > 2) cat("plotCols > 2. Only first two colours used")
+#     }
+#     if (outline)
+#         if (length(outline.col) == 1) outline.col <- rep(outline.col, length(pointColor))
+#     if (!is.null(opacity)) {
+#         pointColor <- rgb(t(col2rgb(pointColor)), alpha=opacity, maxColorValue=255)
+#         if (outline)
+#             outline.col <- rgb(t(col2rgb(outline.col)), alpha=opacity, maxColorValue=255)
+#     }
+#     if (class(axLabs) == "expression") {
+#         colnames(ev) <- paste(axLabs, "[", useDims, "]", sep="")
+#     } else if (as.character(axLabs) != "") {
+#         colnames(ev) <- paste(axLabs, useDims)
+#     } else colnames(ev) <- rep("", ncol(ev))
+#     axLabs <- colnames(ev)
+#     axLabs <- gsub(" ", "_", axLabs)
+#     if (is.na(selectedCells)) selectedCells <- 1:nrow(ev)
+#     mlabel <- function(x) bquote(.(parse(text = x)))  # Function to allow symbols in labels
+#     if (length(useDims) == 2) {
+#         if (bringToFront) {
+#             pC <- order(colorBy, decreasing=FALSE)
+#             evO <- ev[pC,]
+#             pointCol <- pointColor[pC]
+#             if (outline) outline.col <- outline.col[pC]
+#         }
+#         if (plotLegend && is.numeric(colorBy)) {
+#             layout(matrix(1:2, 2), heights = c(1,5))
+#             legCol <- attr(pointColor, "leg")
+#             origPar <- par(no.readonly = TRUE)
+#             par(mar=c(.5,2,4,2), mgp=c(3,.22,0), las=1)
+#             image(as.numeric(legCol[,1]), 1,
+#                   matrix(seq_along(legCol[,1]),ncol=1), col=legCol[,2], axes=FALSE,
+#                   xlab="", ylab="", main = pTitle, cex.axis=.5,
+#                   sub = expression(paste(log[10], "transformed normalised counts")))
+#             axis(1, cex.axis=.5, tck=-.1)
+#             par(mar = c(4.1, 4.1, 1.1, 2.1), mgp = origPar$mgp)
+#         }
+#         if (!outline) {
+#             cellPlot <- plot(evO[selectedCells,], col = pointCol, xlab = mlabel(axLabs[1]),
+#                              ylab = mlabel(axLabs[2]), pch=pch, ...)
+#         } else {
+#             cellPlot <- plot(evO[selectedCells,], col = outline.col, xlab = mlabel(axLabs[1]),
+#                              ylab = mlabel(axLabs[2]), pch=pch, bg = pointCol, ...)
+#         }
+#         if (plotLegend && !(is.numeric(colorBy))) {
+#             if (legPos == "front") legPos <- "topright"
+#             legend(legPos, pch = 16, legend = levels(colorBy), col = plotCols)
+#         }
+#     } else {
+#         cellPlot <- plot3d(ev[selectedCells,], col = pointColor, xlab = axLabs[1],
+#                            ylab = axLabs[2], size=size,
+#                            zlab = axLabs[3], alpha = opacity/255, ...)
+#         par3d(ignoreExtent = TRUE)
+#         ## Legend plotting
+#         legCoords <- apply(ev, 2, range)[,legPlac]
+#         if (legPos == "front") legCoords[,2] <- rev(legCoords[,2])
+#         legCoord <- legCoords[2,]
+#         legMargSign <- 1
+#         if (negLeg) {
+#             legCoord[1] <- legCoords[1,1]
+#             legMargSign <- -1
+#         }
+#         legMargin <- diff(legCoords[,1]) * legendOffset
+#         legCoord[1] <- legCoord[1] + (legMargin * legMargSign)
+#         if (legVert == -1) legCoord[3] <- legCoords[1,3]
+#         if (exists("nCols")) {
+#             if (nCols > 1) {
+#                 lineSpace = legVert * (diff(legCoords[,3]) * legendSize / (nCols - 1))
+#             } else lineSpace = 1
+#             legCoordTab <- data.frame(matrix(rep(legCoord, nCols), ncol = 3, byrow = TRUE),
+#                                       stringsAsFactors = FALSE)
+#             legCoordTab[,3] <- seq(legCoordTab[1,3], by = -lineSpace, length.out = nCols)
+#             legCoordTab[,4] <- levels(colorBy)
+#             legCoordTab[,5] <- plotCols
+#             legCoordTab[,6] <- legCoordTab[,1] + (legMargin * legMargSign * legTextPos) / 4
+#             writeLeg <- function(x) {
+#                 points3d(x=x[1], y=x[2], z=x[3], color=x[5], size = 5)
+#                 x[legPlac[1]] <- x[6]
+#                 text3d(x=x[1], y=x[2], z=x[3], texts=x[4], color="black", adj=0)
+#             }
+#             if (plotLegend) {
+#                 ordLeg <- order(legPlac)
+#                 legTitle <- legCoordTab[1,]
+#                 legTitle[,3] <- legTitle[,3] + lineSpace
+#                 apply(legCoordTab[,c(ordLeg,4:6)], 1, writeLeg)
+#                 text3d(legTitle[ordLeg], texts=legendTitle, adj=0)
+#             }
+#         }
+#         ## Legend plotting end
+#     }
+#     if(!doTree & !doPath & length(useDims) == 3) invisible(cellPlot)
+#     if (doTree) plotTree3(object, useDims = .useDims, pointColor = pointColor,
+#                           project2D = project2D)
+#     if (doPath) {
+#         if (is.null(selectedPath)) selectedPath <- "DiameterPath"
+#         for (i in 1:length(selectedPath)) {
+#             plotPath3(object, diamWidth = diamWidth, diamCol = diamCol[i], useDims = .useDims,
+#                       selectedPath = selectedPath[i], project2D = project2D)
+#         }
+#     }
+#     cellPlot <- list(cellPlot, legend = levels(colorBy), col = plotCols)
+#     invisible(cellPlot)
+# })
 
-setMethod("plotTree3", "reducedDim", function(object, useDims, pointColor, project2D, ...) {
-    ev <- eigenvecs(object)
-    edgeList <- get.edgelist(object@graph)
-    n <- nrow(edgeList)
-    dfo <- order(c(seq(from=1, by=2, length.out=n), seq(from=2, by=2, length.out=n)))
-    segments_df <- c(edgeList[,1], edgeList[,2])[dfo]
-    inds <- match(segments_df, rownames(ev))
-    if (!is.null(project2D)) {
-        ev <- applyMVP(ev[,useDims], project2D)
-        useDims <- 1:2
-    }
-    segments_df <- cbind.data.frame(segments_df, ev[inds,useDims], row.names=1:length(segments_df))
-    if (length(useDims) == 2) {
-        segments_df <- cbind(segments_df, rbind(segments_df[-1,2:3], c(0,0)))
-        segments_df <- segments_df[-seq(from=2, by=2, to=nrow(segments_df)),]
-        colnames(segments_df) <- c("name", "x0", "y0", "x1", "y1")
-        segments(x0=segments_df[,2], y0=segments_df[,3], x1=segments_df[,4], y1=segments_df[,5], col = pointColor[inds])
-    }
-    else segments3d(segments_df[,2:4], color = pointColor[inds])
-})
+# setMethod("plotTree3", "reducedDim", function(object, useDims, pointColor, project2D, ...) {
+#     ev <- eigenvecs(object)
+#     edgeList <- get.edgelist(object@graph)
+#     n <- nrow(edgeList)
+#     dfo <- order(c(seq(from=1, by=2, length.out=n), seq(from=2, by=2, length.out=n)))
+#     segments_df <- c(edgeList[,1], edgeList[,2])[dfo]
+#     inds <- match(segments_df, rownames(ev))
+#     if (!is.null(project2D)) {
+#         ev <- applyMVP(ev[,useDims], project2D)
+#         useDims <- 1:2
+#     }
+#     segments_df <- cbind.data.frame(segments_df, ev[inds,useDims], row.names=1:length(segments_df))
+#     if (length(useDims) == 2) {
+#         segments_df <- cbind(segments_df, rbind(segments_df[-1,2:3], c(0,0)))
+#         segments_df <- segments_df[-seq(from=2, by=2, to=nrow(segments_df)),]
+#         colnames(segments_df) <- c("name", "x0", "y0", "x1", "y1")
+#         segments(x0=segments_df[,2], y0=segments_df[,3], x1=segments_df[,4], y1=segments_df[,5], col = pointColor[inds])
+#     }
+#     else segments3d(segments_df[,2:4], color = pointColor[inds])
+# })
 
 ##' 3D path plot
 ##'
@@ -296,23 +296,23 @@ setMethod("plotTree3", "reducedDim", function(object, useDims, pointColor, proje
 ##' @inheritParams plotPath3
 ##' @return Plots 3D path
 ##' @author Wajid Jawaid
-setMethod("plotPath3", "reducedDim", function(object, diamWidth, diamCol, useDims, selectedPath,
-                                              project2D) {
-    chosenPath <- ifelse(is.null(selectedPath), "DiameterPath", selectedPath)
-    pathNames <- do.call(c, lapply(object@paths, "[[", "name"))
-    findDiamPath <- pathNames==chosenPath
-    if (!any(findDiamPath)) stop("No Diameter Path / Named path Found")
-    if (length(which(findDiamPath)) > 1) warning("Multiple Diameter paths found. First used!")
-    findDiamPath <- which(findDiamPath)[1]
-    ev <- eigenvecs(object)
-    if (!is.null(project2D)) {
-        ev <- applyMVP(ev[,useDims], project2D)
-        useDims <- 1:2
-    }
-    dpCoords <- ev[object@paths[[findDiamPath]][["path"]],useDims]
-    if (length(useDims) == 2) lines(dpCoords, lwd=diamWidth, col=diamCol)
-    else lines3d(dpCoords, lwd=diamWidth, col=diamCol)
-})
+# setMethod("plotPath3", "reducedDim", function(object, diamWidth, diamCol, useDims, selectedPath,
+#                                               project2D) {
+#     chosenPath <- ifelse(is.null(selectedPath), "DiameterPath", selectedPath)
+#     pathNames <- do.call(c, lapply(object@paths, "[[", "name"))
+#     findDiamPath <- pathNames==chosenPath
+#     if (!any(findDiamPath)) stop("No Diameter Path / Named path Found")
+#     if (length(which(findDiamPath)) > 1) warning("Multiple Diameter paths found. First used!")
+#     findDiamPath <- which(findDiamPath)[1]
+#     ev <- eigenvecs(object)
+#     if (!is.null(project2D)) {
+#         ev <- applyMVP(ev[,useDims], project2D)
+#         useDims <- 1:2
+#     }
+#     dpCoords <- ev[object@paths[[findDiamPath]][["path"]],useDims]
+#     if (length(useDims) == 2) lines(dpCoords, lwd=diamWidth, col=diamCol)
+#     else lines3d(dpCoords, lwd=diamWidth, col=diamCol)
+# })
 
 
 ##' Returns loadings from PCA object
