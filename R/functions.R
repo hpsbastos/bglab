@@ -19,7 +19,7 @@
 
 require(Biobase, quietly = TRUE)
 require(igraph, quietly = TRUE)
-require(rgl, quietly = TRUE)
+#require(rgl, quietly = TRUE)
 require(ggplot2, quietly = TRUE)
 require(Rtsne, quietly = TRUE)
 
@@ -592,9 +592,9 @@ multiGenes <- function(scd, reduceMethod, geneVect, nr, nc, res = c(1439, 893),
             open3d(zoom=vp$zoom, userMatrix=vp$userMatrix, windowRect=vp$windowRect)
             plotGene(scd, gene=goi[g], reduceMethod=reduceMethod, useDims=useDims,
                      includeHidden = TRUE, ...)
-            if (!is.null(pdf.name)) {
-                rgl.postscript(paste(pdf.name,"-",goi[g], "temp.pdf",sep=""), fmt="pdf")
-            }
+#            if (!is.null(pdf.name)) {
+#                rgl.postscript(paste(pdf.name,"-",goi[g], "temp.pdf",sep=""), fmt="pdf")
+#            }
         }
         if (!is.null(pdf.name)) {
             system(paste("pdfjoin *", pdf.name, "*temp.pdf ", "--outfile ", pdf.name,
@@ -893,12 +893,12 @@ plotTechVar <- function(varGenes, pdf=NULL, pch=20, pch.var = pch, pch.notvar = 
 ##' @return Matrix to achieve transformation from model space to the screen
 ##' @author Wajid Jawaid
 ##' @export
-getMVP <- function() {
-    if (rgl.cur()==0) stop("No rgl window open")
-    modelMatrix <- par3d()$modelMatrix
-    projMatrix <- par3d()$projMatrix
-    projMatrix %*% modelMatrix
-}
+#getMVP <- function() {
+#    if (rgl.cur()==0) stop("No rgl window open")
+#    modelMatrix <- par3d()$modelMatrix
+#    projMatrix <- par3d()$projMatrix
+#    projMatrix %*% modelMatrix
+#}
 
 ##' Applies transformation from rgl plot to data
 ##'
@@ -911,12 +911,12 @@ getMVP <- function() {
 ##' @return Returns the transformed data ready to be plotted using the R base plot function.
 ##' @author Wajid Jawaid
 ##' @export
-applyMVP <- function(data, MVP=NULL) {
-    if (is.null(MVP)) MVP <- getMVP()
-    data <- rbind(t(data),1)
-    data <- t(MVP %*% data)
-    data <- data[,1:3] / data[,4]
-}
+#applyMVP <- function(data, MVP=NULL) {
+#    if (is.null(MVP)) MVP <- getMVP()
+#    data <- rbind(t(data),1)
+#    data <- t(MVP %*% data)
+#    data <- data[,1:3] / data[,4]
+#}
 
 ##' Plots gene profile on trajectory
 ##'
